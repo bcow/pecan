@@ -43,6 +43,19 @@ met.process <- function(site, input_met, start_date, end_date, model, host, dbpa
   register.xml <- system.file(paste0("registration/register.", met, ".xml"), package = "PEcAn.data.atmosphere")
   register <- read.register(register.xml, con)
   
+  # first attempt at function that designates where to start met.process
+  if(is.null(input_met$id)){
+    stage <- list(download.raw = TRUE, met2cf = TRUE, standardize = TRUE, met2model = TRUE)
+  }else{
+    stage <- met.process.stage(input_met$id,register$format$id,con)
+    # Is there a situation in which the input ID could be given but not the file path? 
+    # I'm assuming not right now
+    assign(stage$id.name,list(
+      inputid = input_met$id, 
+      dbfileid = db.query(paste0("SELECT id from dbfiles where file_name = '", basename(input_met$path) ,"' AND file_path = '", dirname(input_met$path) ,"'"),con)[[1]]
+    ))
+  }
+  
   #setup additional browndog arguments
   if(!is.null(browndog)){browndog$inputtype <- register$format$inputtype}
   
@@ -306,3 +319,28 @@ db.site.lat.lon <- function(site.id,con){
     return(list(lat = site$lat, lon = site$lon))
   }
 }
+
+#################################################################################################################################
+
+##' @name site_from_tag
+##' @title site_from_tag
+##' @export
+##' @param sitename
+##' @param tag
+##' @author Betsy Cowdery
+##' 
+##' Function to find the site code for a specific tag 
+##' Example: 
+##'   sitename = "Rhinelander Aspen FACE Experiment (FACE-RHIN)" 
+##'   tag = "FACE"
+##'   site_from_tag(sitename,tag) = "RHIN"
+##' Requires that site names be set up specifically with (tag-sitecode) - this may change
+
+
+site_from_tag <- function(sitename,tag){
+  temp <- regmatches(sitename,gregexpr("(?<=\\().*?(?=\\))", sitename, perl=TRUE))[[1]]
+  pref <- paste0(tag,"-")
+  site <- unlist(strsplit(temp[grepl(pref,temp)], pref))[2]
+  return(site)
+}
+
