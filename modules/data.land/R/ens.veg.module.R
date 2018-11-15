@@ -10,7 +10,7 @@
 ##' @param n.ensemble integer, ensemble member number
 ##' @param new_site data frame, id/lat/lon/name info about the site
 ##' @param host list, host info as in settings$host, host$name forced to be "localhost" upstream
-##' 
+##' @export
 ##' @author Istem Fer
 ens_veg_module <- function(getveg.id, dbparms, 
                             input_veg, 

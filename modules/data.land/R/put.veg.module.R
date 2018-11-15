@@ -14,7 +14,7 @@
 ##' @param new_site data frame, id/lat/lon/name info about the site
 ##' @param host list, host info as in settings$host, host$name forced to be "localhost" upstream
 ##' @param overwrite logical flag for convert.input
-##' 
+##' @export
 ##' @author Istem Fer
 put_veg_module <- function(getveg.id, dbparms, 
                             input_veg, pfts,
