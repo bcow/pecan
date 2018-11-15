@@ -9,7 +9,7 @@
 ##' @param host list, host info as in settings$host, host$name forced to be "localhost" upstream
 ##' @param machine_host local machine hostname, e.g. "pecan2.bu.edu"
 ##' @param overwrite logical flag for convert.input
-##' 
+##' @export
 ##' @author Istem Fer
 get_veg_module <- function(input_veg, 
                             outfolder,
