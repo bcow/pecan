@@ -17,14 +17,14 @@
 ##' @export
 ##' @author Istem Fer
 put_veg_module <- function(getveg.id, dbparms, 
-                            input_veg, pfts,
-                            outfolder, n.ensemble,
-                            dir, machine, model,
-                            start_date, end_date,
-                            new_site, 
-                            host, overwrite){
+                           input_veg, pfts,
+                           outfolder, n.ensemble,
+                           dir, machine, model,
+                           start_date, end_date,
+                           new_site, 
+                           host, overwrite){
   
-
+  
   
   #--------------------------------------------------------------------------------------------------#
   # Write model specific IC files
@@ -37,14 +37,21 @@ put_veg_module <- function(getveg.id, dbparms,
   on.exit(db.close(con))
   
   # Determine IC file format name and mimetype
-  model_info <- db.query(paste0("SELECT f.name, f.id, mt.type_string from modeltypes as m", " join modeltypes_formats as mf on m.id = mf.modeltype_id", 
-                                " join formats as f on mf.format_id = f.id", " join mimetypes as mt on f.mimetype_id = mt.id", 
-                                " where m.name = '", model, "' AND mf.tag='", input_veg$output,"'"), con)
+  # model_info <- db.query(paste0("SELECT f.name, f.id, mt.type_string from modeltypes as m",
+  #                               " join modeltypes_formats as mf on m.id = mf.modeltype_id",
+  #                               " join formats as f on mf.format_id = f.id", " join mimetypes as mt on f.mimetype_id = mt.id",
+  #                               " where m.name = '", model, "' AND mf.tag='", input_veg$output,"'"), con)
   
+  model_info <- tbl(bety, "modeltypes") %>% filter(name == model) %>% 
+    select(one_of("id", "name")) %>% rename("modeltype_id" = id, "modeltype_name" = name) %>% 
+    left_join(., tbl(bety, "modeltypes_formats") %>% filter(tag == input_veg$output) %>% select(one_of("modeltype_id", "format_id"))) %>%
+    left_join(., tbl(bety, "formats") %>% select(one_of("id", "name", "mimetype_id")) %>% rename("format_id" = id)) %>% 
+    left_join(., tbl(bety, "mimetypes") %>% select(one_of("id", "type_string")) %>% rename("mimetype_id" = id)) %>% collect
+    
   PEcAn.logger::logger.info("Begin Model Specific Conversion")
   
-  formatname <- model_info[1]
-  mimetype   <- model_info[3]
+  formatname <- model_info$name
+  mimetype   <- model_info$type_string
   
   # spp.file <- db.query(paste("SELECT * from dbfiles where container_id =", getveg.id), con)
   spp.file <- PEcAn.DB::db.query(paste0("SELECT * from dbfiles where id = ", getveg.id$dbfile.id), con)
@@ -52,7 +59,8 @@ put_veg_module <- function(getveg.id, dbparms,
   pkg  <- "PEcAn.data.land"
   fcn  <- "write_ic"
   
-  putveg.id <- convert.input(input.id = getveg.id,
+  
+  putveg.id <- convert.input(input.id = getveg.id$input.id,
                              outfolder = spp.file$file_path, 
                              formatname = formatname, 
                              mimetype = mimetype,
@@ -65,7 +73,7 @@ put_veg_module <- function(getveg.id, dbparms,
                              # fcn specific args 
                              in.path = spp.file$file_path, 
                              in.name = spp.file$file_name,
-                             model = model,
+                             model_info = model_info,
                              new_site = new_site,
                              pfts = pfts,
                              source = input_veg$source)
@@ -73,5 +81,5 @@ put_veg_module <- function(getveg.id, dbparms,
   
   return(putveg.id)
   
-
+  
 }

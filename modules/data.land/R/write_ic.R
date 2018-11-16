@@ -1,9 +1,19 @@
 ##' @name write_ic
 ##' @title write_ic
+##' @param in.path
+##' @param in.name
+##' @param start_date
+##' @param end_date
+##' @param outfolder
+##' @param model_info   dataframe with the modeltype id and modeltype name
+##' @param new_site
+##' @param pfts
+##' @param source
+##' @param overwrite
 ##' @export
 ##' @author Istem Fer
 write_ic <- function(in.path, in.name, start_date, end_date, 
-                     outfolder, model, new_site, pfts,
+                     outfolder, model_info, new_site, pfts,
                      source = input_veg$source, overwrite = FALSE, ...){
   
   
@@ -18,7 +28,7 @@ write_ic <- function(in.path, in.name, start_date, end_date,
   obs <- as.data.frame(veg_info[[2]], stringsAsFactors = FALSE)
   
   # NOTE : match_pft may return NAs for unmatched dead trees
-  pft.info <- PEcAn.data.land::match_pft(obs$bety_species_id, pfts)
+  pft.info <- PEcAn.data.land::match_pft(obs$bety_species_id, pfts, model_info$modeltype_id)
   
   ### merge with other stuff
   obs$pft <- pft.info$pft
@@ -29,9 +39,9 @@ write_ic <- function(in.path, in.name, start_date, end_date,
   # veg2model
   
   ## Set model-specific functions
-  pkg <- paste0("PEcAn.", model)
+  pkg <- paste0("PEcAn.", model_info$modeltype_name)
   do.call("library", list(pkg))
-  fcnx <- paste("veg2model.", model, sep = "")
+  fcnx <- paste("veg2model.", model_info$modeltype_name, sep = "")
   if (!exists(fcnx)) {
     PEcAn.logger::logger.severe(paste(fcnx, "does not exist."))
   }else{

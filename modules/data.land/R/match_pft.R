@@ -4,6 +4,7 @@
 ##' 
 ##' @param bety_species_id  vector of BETYdb species IDs
 ##' @param pfts             settings$pfts.  List of pfts with database matching based on name
+##' @param modeltype_id     modeltype id, needed only if the there are multiple pfts of the same name
 ##' @param con              database connection, if NULL use traits package
 ##' @param allow_missing    flag to indicate that settings file does not need to match exactly
 ##' 
@@ -11,7 +12,7 @@
 ##' @return table of BETYdb PFT IDs matched to species IDs
 ##' 
 ##' @export
-match_pft <- function(bety_species_id, pfts, query = NULL, con = NULL, allow_missing = FALSE){
+match_pft <- function(bety_species_id, pfts, modeltype_id = NA, query = NULL, con = NULL, allow_missing = FALSE){
   
   ### get species to PFT mappting
   if(!is.null(con)){
@@ -35,6 +36,11 @@ match_pft <- function(bety_species_id, pfts, query = NULL, con = NULL, allow_mis
     for (pft in pfts) {
       # query pft id
       bety_pft <- traits::betydb_query(name = pft$name, table = 'pfts', user = 'bety', pwd = 'bety')
+      if(dim(bety_pft)[1] > 1 & !is.na(modeltype_id)){
+        bety_pft <- bety_pft %>% filter(modeltype_id == !!modeltype_id)
+      }else{
+        PEcAn.logger::logger.error(sprintf("More than one PFT has the name %s. Need model id or additional information.", pft$name))
+      }
       # query species id
       bety_species <- traits::betydb_query(pft_id = bety_pft$id, table = 'pfts_species', user = 'bety', pwd = 'bety')
       bety_list[[pft$name]] <- bety_species$specie_id

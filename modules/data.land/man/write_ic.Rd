@@ -4,8 +4,11 @@
 \alias{write_ic}
 \title{write_ic}
 \usage{
-write_ic(in.path, in.name, start_date, end_date, outfolder, model,
+write_ic(in.path, in.name, start_date, end_date, outfolder, model_info,
   new_site, pfts, source = input_veg$source, overwrite = FALSE, ...)
+}
+\arguments{
+\item{model_info}{dataframe with the modeltype id and modeltype name}
 }
 \description{
 write_ic
