@@ -127,6 +127,9 @@ veg2model.ED2 <- function(outfolder, veg_info, start_date, new_site, source){
     css$cohort <-  do.call("c", lapply(seq_len(n.patch), function(x) 1:sum(css$patch==x))) 
   }
   
+  # Should this fix be here or should year be defined somewhere else?
+  if(is.null(css$year)) css$year <- lubridate::year(css$posix)
+  
   inv.years <- as.numeric(unique(css$year))
   # suitable years
   av.years <- inv.years[inv.years <= start_year]
