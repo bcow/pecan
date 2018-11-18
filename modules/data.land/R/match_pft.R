@@ -37,7 +37,7 @@ match_pft <- function(bety_species_id, pfts, modeltype_id = NA, query = NULL, co
       # query pft id
       bety_pft <- traits::betydb_query(name = pft$name, table = 'pfts', user = 'bety', pwd = 'bety')
       if(dim(bety_pft)[1] > 1 & !is.na(modeltype_id)){
-        bety_pft <- bety_pft %>% dplyr::filter(modeltype_id == !!modeltype_id)
+        bety_pft <- bety_pft[which(bety_pft$modeltype_id == modeltype_id),]
       }else{
         PEcAn.logger::logger.error(sprintf("More than one PFT has the name %s. Need model id or additional information.", pft$name))
       }
