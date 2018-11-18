@@ -22,13 +22,22 @@ write_ic <- function(in.path, in.name, start_date, end_date,
   rds_file <- file.path(in.path, in.name)
   veg_info <- readRDS(rds_file) 
   
+  # Fix the model_info data.frame formatting that can get changed when called through remote
+  
+  model_info$modeltype_id   <- as.numeric(model_info$modeltype_id)
+  model_info$modeltype_name <- as.character(trimws(model_info$modeltype_name))
+  model_info$name           <- as.character(trimws(model_info$name))
+  model_info$tag            <- as.character(trimws(model_info$tag))
   #--------------------------------------------------------------------------------------------------#
   # Match PFTs
   
+  PEcAn.logger::logger.info("Loading Observations")
   obs <- as.data.frame(veg_info[[2]], stringsAsFactors = FALSE)
   
+  PEcAn.logger::logger.info("Matching PFTs, this can take a while")
   # NOTE : match_pft may return NAs for unmatched dead trees
   pft.info <- PEcAn.data.land::match_pft(obs$bety_species_id, pfts, model_info$modeltype_id)
+  PEcAn.logger::logger.info("Done matching PFTs!")
   
   ### merge with other stuff
   obs$pft <- pft.info$pft
@@ -48,7 +57,7 @@ write_ic <- function(in.path, in.name, start_date, end_date,
     fcn <- match.fun(fcnx)
   }
   
-  out <- fcn(outfolder, veg_info, start_date, new_site, source)
+  out <- fcn(outfolder, veg_info, start_date, new_site, source, model_info)
   
 
   # Build results dataframe for convert.input

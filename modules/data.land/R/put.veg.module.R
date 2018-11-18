@@ -44,7 +44,7 @@ put_veg_module <- function(getveg.id, dbparms,
   
   model_info <- tbl(bety, "modeltypes") %>% filter(name == model) %>% 
     select(one_of("id", "name")) %>% rename("modeltype_id" = id, "modeltype_name" = name) %>% 
-    left_join(., tbl(bety, "modeltypes_formats") %>% filter(tag == input_veg$output) %>% select(one_of("modeltype_id", "format_id"))) %>%
+    left_join(., tbl(bety, "modeltypes_formats") %>% filter(tag == input_veg$output) %>% select(one_of("modeltype_id", "format_id", "tag"))) %>%
     left_join(., tbl(bety, "formats") %>% select(one_of("id", "name", "mimetype_id")) %>% rename("format_id" = id)) %>% 
     left_join(., tbl(bety, "mimetypes") %>% select(one_of("id", "type_string")) %>% rename("mimetype_id" = id)) %>% collect
     
