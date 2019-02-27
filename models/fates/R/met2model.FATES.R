@@ -23,7 +23,7 @@
 ##' @param verbose should the function be very verbosefor(year in start_year:end_year)
 ##' @importFrom ncdf4 ncvar_get ncdim_def ncatt_get ncvar_put
 met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date, lst = 0, lat, lon, 
-                            overwrite = FALSE, verbose = FALSE, ...) {
+                            overwrite = FALSE, verbose = FALSE, leapyear = FALSE) {
   
   # General Structure- FATES Uses Netcdf so we need to rename vars, split files from years into months, and generate the header file
   # Get Met file from inpath.
@@ -43,7 +43,6 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
     ncvar_put(nc = ncout, varid = name, vals = data)
     return(invisible(ncout))
   }
-  sm <- c(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365) * 86400  ## day of year thresholds
   
   ## Create output directory
   dir.create(outfolder)
@@ -120,6 +119,12 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
       # There's no clear CF convention for this variable 
       # so we can't expect to see it in a PEcAn CF met file
       ZBOT <- 30
+      
+      # CLM can do both leap year and no leap year. 
+      sm <- ifelse(leapyear & lubridate::leap_year(year),
+                   c(0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366) * 86400 ,
+                   c(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365) * 86400 
+      )
       
       ## CREATE MONTHLY FILES
       for (mo in 1:12) {
