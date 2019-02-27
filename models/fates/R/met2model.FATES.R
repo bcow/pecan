@@ -31,6 +31,10 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
   # close
   # defining temporal dimension needs to be figured out. If we configure FATES to use same tstep then we may not need to change dimensions  
   
+  # "EDGEW"    "EDGEE"    "EDGES"   "EDGEN"
+  # Defines the gridcell in which you're working
+  # Not sure what the difference is between lat and lon
+  
   library(PEcAn.utils)
   
   insert <- function(ncout, name, unit, data) {
@@ -60,17 +64,62 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
       ## Open netcdf file
       nc <- ncdf4::nc_open(in.file)
       
-      ## extract variables. These need to be read in and converted to CLM names (all units are correct)
+      ## Extract variables 
+      ## These need to be read in and converted to CLM names (all units are correct)
+      
       time      <- ncvar_get(nc, "time")
-      latitude  <- ncvar_get(nc, "latitude")
-      longitude <- ncvar_get(nc, "longitude")
-      FLDS      <- ncvar_get(nc, "surface_downwelling_longwave_flux_in_air")  ## W/m2
-      FSDS      <- ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  ## W/m2
-      PRECTmms  <- ncvar_get(nc, "precipitation_flux")  ## kg/m2/s -> mm/s (same val, diff name)
-      PSRF      <- ncvar_get(nc, "air_pressure")  ## Pa
-      SHUM      <- ncvar_get(nc, "specific_humidity")  ## g/g -> kg/kg
-      TBOT      <- ncvar_get(nc, "air_temperature")  ## K
-      WIND      <- sqrt(ncvar_get(nc, "eastward_wind") ^ 2 + ncvar_get(nc, "northward_wind") ^ 2)  ## m/s
+      lat  <- ncvar_get(nc, "latitude")
+      lon <- ncvar_get(nc, "longitude")
+      
+      # FSDS required
+      FSDS <- ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  ## W/m2
+      # FLDS not required: calculates based on Temperature, Pressure and Humidity
+      FLDS <- try(ncvar_get(nc, "surface_downwelling_longwave_flux_in_air"), silent = TRUE)  ## W/m2
+      useFLDS <- is.numeric(FLDS)
+      
+      # PRECTmms required
+      PRECTmms <- ncvar_get(nc, "precipitation_flux")  ## kg/m2/s -> mm/s (same val, diff name)
+      # PSRF not required
+      PSRF <- try(ncvar_get(nc, "air_pressure"), silent = TRUE)  ## Pa
+      usePSRF <- is.numeric(PSRF)
+      
+      # RH is optional but can stand in for SHUM and TDEW
+      RH <- try(ncdf4::ncvar_get(nc, "relative_humidity"), silent = TRUE)
+      SHUM <- try(ncdf4::ncvar_get(nc, "specific_humidity"), silent = TRUE)  ## g/g -> kg/kg
+      TDEW <- try(ncdf4::ncvar_get(nc, "dew_point_temperature"), silent = TRUE)
+      
+      useRH <- is.numeric(RH)
+      useSHUM <- is.numeric(SHUM)
+      useTDEW <- is.numeric(TDEW)
+      
+      if(!useRH & (!useSHUM | !useTDEW)){
+        PEcAn.logger::logger.error("Need at least RH or SHUM and TDEW")
+      }
+      
+      # TBOT required
+      TBOT <- ncvar_get(nc, "air_temperature")  ## K
+      
+      # WIND required
+      WIND <- sqrt(ncvar_get(nc, "eastward_wind") ^ 2 + ncvar_get(nc, "northward_wind") ^ 2)  ## m/s
+      
+      ## Define new variables that are also required for the CLM met drivers
+      
+      # EDGEW, EDGEE, EDGES, EDGEN
+      # Creates edges from atmospheric data
+      # we are doing site level runs and thus are making the bounded area 
+      # arbitrarily small (offset = 0.1)
+      
+      offset <- 0.1
+      
+      EDGEW <- lon
+      EDGEE <- lon + offset
+      EDGES <- lat 
+      EDGEN <- lat + offset
+      
+      # ZBOT not required and hardcoaded when used. 
+      # There's no clear CF convention for this variable 
+      # so we can't expect to see it in a PEcAn CF met file
+      ZBOT <- 30
       
       ## CREATE MONTHLY FILES
       for (mo in 1:12) {
@@ -81,27 +130,30 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
           next
         }
         
-        lat.dim  <- ncdim_def(name = "latitude", units = "", vals = 1:1, create_dimvar = FALSE)
-        lon.dim  <- ncdim_def(name = "longitude", units = "", vals = 1:1, create_dimvar = FALSE)
+        lat.dim  <- ncdim_def(name = "lat", units = "", vals = 1:1, create_dimvar = FALSE)
+        lon.dim  <- ncdim_def(name = "lon", units = "", vals = 1:1, create_dimvar = FALSE)
         time.dim <- ncdim_def(name = "time", units = "seconds", vals = time, 
-                              create_dimvar = TRUE, unlim = TRUE)
-        dim      <- list(lat.dim, lon.dim, time.dim)  ## docs say this should be time,lat,lon but get error writing unlimited first
+                              create_dimvar = TRUE) # , unlim = TRUE) # Betsy removed unlim = TRUE because example file was not unlimited and unlimited causes problems
+        ## docs say this should be time,lat,lon but get error writing unlimited first
         ## http://www.cesm.ucar.edu/models/cesm1.2/clm/models/lnd/clm/doc/UsersGuide/x12979.html
+        dim      <- list(time.dim, lat.dim, lon.dim)  
         
         # LATITUDE
-        var <- ncdf4::ncvar_def(name = "latitude", units = "degree_north", 
-                         dim = list(lat.dim, lon.dim), missval = as.numeric(-9999))
+        var <- ncdf4::ncvar_def(name = "LATIXY", units = "degree_north", 
+                                dim = list(lat.dim, lon.dim), missval = as.numeric(-9999))
         ncout <- ncdf4::nc_create(outfile, vars = var, verbose = verbose)
-        ncvar_put(nc = ncout, varid = "latitude", vals = latitude)
+        ncvar_put(nc = ncout, varid = "LATIXY", vals = lat)
         
         # LONGITUDE
-        var <- ncdf4::ncvar_def(name = "longitude", units = "degree_east", 
-                         dim = list(lat.dim, lon.dim), missval = as.numeric(-9999))
+        var <- ncdf4::ncvar_def(name = "LONGXY", units = "degree_east", 
+                                dim = list(lat.dim, lon.dim), missval = as.numeric(-9999))
         ncout <- ncdf4::ncvar_add(nc = ncout, v = var, verbose = verbose)
-        ncvar_put(nc = ncout, varid = "longitude", vals = longitude)
+        ncvar_put(nc = ncout, varid = "LONGXY", vals = lon)
         
         ## surface_downwelling_longwave_flux_in_air
-        ncout <- insert(ncout, "FLDS", "W m-2", FLDS)
+        if(useFLDS){
+          ncout <- insert(ncout, "FLDS", "W m-2", FLDS)
+        }
         
         ## surface_downwelling_shortwave_flux_in_air
         ncout <- insert(ncout, "FSDS", "W m-2", FSDS)
@@ -110,10 +162,23 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
         ncout <- insert(ncout, "PRECTmms", "mm/s", PRECTmms)
         
         ## air_pressure
-        ncout <- insert(ncout, "PSRF", "Pa", PSRF)
+        if(usePSRF){
+          ncout <- insert(ncout, "PSRF", "Pa", PSRF)
+        }
+        
+        ## relative_humidity
+        if(useRH){
+          ncout <- insert(ncout, "RH", "%", RH)
+        }
         
         ## specific_humidity
-        ncout <- insert(ncout, "SHUM", "kg/kg", SHUM)
+        if(useSHUM){
+          ncout <- insert(ncout, "SHUM", "kg/kg", SHUM)
+        }
+        
+        if(useTDEW){ 
+          ncout <- insert(ncout, "TDEW", "kg/kg", TDEW)
+        }
         
         ## air_temperature
         ncout <- insert(ncout, "TBOT", "K", TBOT)
@@ -123,31 +188,10 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
         
         ncdf4::nc_close(ncout)
         
-        #   ncvar_rename(ncfile,varid="LONGXY")
-        #   ncvar_rename(ncfile,varid="LATIXY")
-        #   #     
-        #   #     double EDGEW(scalar) ;
-        #   #     EDGEW:long_name = "western edge in atmospheric data" ;
-        #   #     EDGEW:units = "degrees E" ;
-        #   EDGEW = ncvar_rename(ncfile,"EDGEW","EDGEW")
-        #   
-        #   #     double EDGEE(scalar) ;
-        #   #     EDGEE:long_name = "eastern edge in atmospheric data" ;
-        #   #     EDGEE:units = "degrees E" ;
-        #   EDGEE = ncvar_rename(ncfile,"EDGEE","EDGEE")
-        #   
-        #   #     double EDGES(scalar) ;
-        #   #     EDGES:long_name = "southern edge in atmospheric data" ;
-        #   #     EDGES:units = "degrees N" ;
-        #   EDGES = ncvar_rename(ncfile,"EDGES","EDGES") 
-        #   #     
-        #   #     double EDGEN(scalar) ;
-        #   #     EDGEN:long_name = "northern edge in atmospheric data" ;
-        #   #     EDGEN:units = "degrees N" ;
-        #   EDGEN = ncvar_rename(ncfile,"EDGEN","EDGEN")
       }
       
       ncdf4::nc_close(nc)
+      
     }  ## end file exists
   }  ### end loop over met files
   
@@ -162,3 +206,5 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
                     dbfile.name = "", 
                     stringsAsFactors = FALSE))
 } # met2model.FATES
+
+
