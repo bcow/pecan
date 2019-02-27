@@ -66,9 +66,9 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
       ## Extract variables 
       ## These need to be read in and converted to CLM names (all units are correct)
       
-      time      <- ncvar_get(nc, "time")
+      time <- ncvar_get(nc, "time")
       lat  <- ncvar_get(nc, "latitude")
-      lon <- ncvar_get(nc, "longitude")
+      lon  <- ncvar_get(nc, "longitude")
       
       # FSDS required
       FSDS <- ncvar_get(nc, "surface_downwelling_shortwave_flux_in_air")  ## W/m2
@@ -85,14 +85,12 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
       # RH is optional but can stand in for SHUM and TDEW
       RH <- try(ncdf4::ncvar_get(nc, "relative_humidity"), silent = TRUE)
       SHUM <- try(ncdf4::ncvar_get(nc, "specific_humidity"), silent = TRUE)  ## g/g -> kg/kg
-      TDEW <- try(ncdf4::ncvar_get(nc, "dew_point_temperature"), silent = TRUE)
-      
+
       useRH <- is.numeric(RH)
       useSHUM <- is.numeric(SHUM)
-      useTDEW <- is.numeric(TDEW)
-      
-      if(!useRH & (!useSHUM | !useTDEW)){
-        PEcAn.logger::logger.error("Need at least RH or SHUM and TDEW")
+
+      if(!useRH & !useSHUM){
+        PEcAn.logger::logger.error("SHUM if RH not available")
       }
       
       # TBOT required
@@ -121,10 +119,11 @@ met2model.FATES <- function(in.path, in.prefix, outfolder, start_date, end_date,
       ZBOT <- 30
       
       # CLM can do both leap year and no leap year. 
-      sm <- ifelse(leapyear & lubridate::leap_year(year),
-                   c(0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366) * 86400 ,
-                   c(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365) * 86400 
-      )
+      if(leapyear & lubridate::leap_year(year)){
+        sm <- c(0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366) * 86400
+      }else{
+        sm <- c(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365) * 86400 
+      }
       
       ## CREATE MONTHLY FILES
       for (mo in 1:12) {
