@@ -16,7 +16,7 @@
 #' @examples
 #' irisdb <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
 #' dplyr::copy_to(irisdb, iris[1,], name = "iris", overwrite = TRUE)
-#' insert_table(iris[-1,], "iris", irisdb$con)
+#' insert_table(iris[-1,], "iris", irisdb)
 #' dplyr::tbl(irisdb, "iris")
 insert_table <- function(values, table, con, coerce_col_class = TRUE, drop = TRUE) {
   values_fixed <- match_dbcols(values, table, con, coerce_col_class, drop = TRUE)
@@ -101,8 +101,8 @@ build_insert_query <- function(values, table, .con) {
 
   insert_list <- value_list %>%
     purrr::map(unname) %>%
-    purrr::map(dbplyr::escape) %>%
-    purrr::map(dbplyr::sql_vector)
+    purrr::map(dbplyr::escape, con = .con) %>%
+    purrr::map(dbplyr::sql_vector, con = .con)
 
   glue::glue_sql(
     "INSERT INTO {`table`} ({`colnames(values)`*}) ",

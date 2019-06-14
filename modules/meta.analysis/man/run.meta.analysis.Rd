@@ -4,13 +4,15 @@
 \alias{run.meta.analysis}
 \title{Invoke PEcAn meta.analysis
 This will use the following items from setings:
-- settings$pfts
-- settings$database$bety
-- settings$database$dbfiles
-- settings$meta.analysis$update}
+\itemize{
+\item settings$pfts
+\item settings$database$bety
+\item settings$database$dbfiles
+\item settings$meta.analysis$update
+}}
 \usage{
-run.meta.analysis(pfts, iterations, random = TRUE, threshold = 1.2, dbfiles,
-  database)
+run.meta.analysis(pfts, iterations, random = TRUE, threshold = 1.2,
+  dbfiles, database)
 }
 \arguments{
 \item{pfts}{the list of pfts to get traits for}
@@ -19,6 +21,9 @@ run.meta.analysis(pfts, iterations, random = TRUE, threshold = 1.2, dbfiles,
 
 \item{random}{should random effects be used?}
 
+\item{threshold}{Gelman-Rubin convergence diagnostic, passed on to
+\code{\link{pecan.ma.summary}}}
+
 \item{dbfiles}{location where previous results are found}
 
 \item{database}{database connection parameters}
@@ -26,7 +31,7 @@ run.meta.analysis(pfts, iterations, random = TRUE, threshold = 1.2, dbfiles,
 \value{
 nothing, as side effect saves \code{trait.mcmc} created by
 \code{\link{pecan.ma}} and post.distns created by
-\code{\link{approx.posterior(trait.mcmc, ...)}}  to trait.mcmc.Rdata \
+\code{\link{approx.posterior}(trait.mcmc, ...)}  to trait.mcmc.Rdata 
 and post.distns.Rdata, respectively
 }
 \description{

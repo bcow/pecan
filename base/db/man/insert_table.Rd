@@ -11,7 +11,7 @@ insert_table(values, table, con, coerce_col_class = TRUE, drop = TRUE)
 
 \item{table}{Name of target SQL table, as character}
 
-\item{con}{database connection object}
+\item{con}{Database connection object}
 
 \item{coerce_col_class}{logical, whether or not to coerce local data columns 
 to SQL classes. Default = `TRUE.`}
@@ -30,6 +30,6 @@ database.
 \examples{
 irisdb <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
 dplyr::copy_to(irisdb, iris[1,], name = "iris", overwrite = TRUE)
-insert_table(iris[-1,], "iris", irisdb$con)
+insert_table(iris[-1,], "iris", irisdb)
 dplyr::tbl(irisdb, "iris")
 }

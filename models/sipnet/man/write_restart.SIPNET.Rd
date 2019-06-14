@@ -4,13 +4,17 @@
 \alias{write_restart.SIPNET}
 \title{write_restart.SIPNET}
 \usage{
-write_restart.SIPNET(outdir, runid, start.time, stop.time, settings, new.state,
-  RENAME = TRUE, new.params = FALSE, inputs)
+write_restart.SIPNET(outdir, runid, start.time, stop.time, settings,
+  new.state, RENAME = TRUE, new.params = FALSE, inputs)
 }
 \arguments{
 \item{outdir}{output directory}
 
 \item{runid}{run ID}
+
+\item{start.time}{start date and time for each SDA ensemble}
+
+\item{stop.time}{stop date and time for each SDA ensemble}
 
 \item{settings}{PEcAn settings object}
 
@@ -18,9 +22,9 @@ write_restart.SIPNET(outdir, runid, start.time, stop.time, settings, new.state,
 
 \item{RENAME}{flag to either rename output file or not}
 
-\item{time}{year that is being read}
+\item{new.params}{list of parameters to convert between different states}
 
-\item{met}{}
+\item{inputs}{list of model inputs to use in write.configs.SIPNET}
 }
 \value{
 NONE

@@ -12,11 +12,12 @@
 ##' @name  split_inputs.SIPNET
 ##' @author Mike Dietze and Ann Raiho
 ##' 
-##' @param multi.settings
-##' @param start.time
-##' @param stop.time
-##' @param ens                ensemble number. default = 1
-##' @param outpath  if specified, write output to a new directory. Default NULL writes back to the directory being read
+##' @param settings PEcAn settings object
+##' @param start.time start date and time for each SDA ensemble
+##' @param stop.time stop date and time for each SDA ensemble
+##' @param inputs list of model inputs to use in write.configs.SIPNET
+##' @param overwrite Default FALSE
+##' @param outpath if specified, write output to a new directory. Default NULL writes back to the directory being read
 ##' @description Splits climate met for SIPNET
 ##' 
 ##' @return file split up climate file
@@ -32,11 +33,11 @@ split_inputs.SIPNET <- function(settings, start.time, stop.time, inputs, overwri
   
 
   #### Get met paths
-  met <- inputs$met$path
+  met <- inputs
   path <- dirname(met)
   prefix <- sub(".clim", "", basename(met), fixed = TRUE)
   if(is.null(outpath)){
-    outpath = path
+    outpath <- path
   }
   if(!dir.exists(outpath)) dir.create(outpath)
   
@@ -46,11 +47,10 @@ split_inputs.SIPNET <- function(settings, start.time, stop.time, inputs, overwri
   file <- paste0(outpath, "/", prefix, ".", paste0(as.Date(start.time), "-", as.Date(stop.time)), ".clim")
   
   if(file.exists(file) & !overwrite){
-    settings$run$inputs$met$path <- file
-    return(settings$run$inputs)
+    
+    return(file)
   }
-    
-    
+
   dat <- read.table(met, header = FALSE)
 
   ###### Find Correct Met
@@ -58,12 +58,12 @@ split_inputs.SIPNET <- function(settings, start.time, stop.time, inputs, overwri
   sel2 <- which(dat[, 2] == as.numeric(end.year) & 
                   dat[, 3] == as.numeric(end.day))[length(which(dat[, 2] == as.numeric(end.year) & 
                                                                   dat[, 3] == as.numeric(end.day)))]
-  
+
   ###### Write Met to file
 
   write.table(dat[sel1:sel2, ], file, row.names = FALSE, col.names = FALSE)
-  
+
   ###### Output input path to inputs
-  settings$run$inputs$met$path <- file
-  return(settings$run$inputs)
+  #settings$run$inputs$met$path <- file
+  return(file)
 } # split_inputs.SIPNET
