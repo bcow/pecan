@@ -80,6 +80,32 @@ convert.samples.ED <- function(trait.samples) {
       
     }  ## End dark_respiration_factor loop
   }  ## End Vcmax  
+  
+  # All psi traits need to be negative
+  for(n in c("leaf_psi_tlp", "wood_psi_tlp", "leaf_psi_min", "wood_psi_min", "wood_psi50")){
+    if(n %in% names(trait.samples)){
+      trait.samples[[n]] <- -as.numeric(trait.samples[[n]])
+    }
+  }
+  # direct comparison only true if not using phenology 
+  # :TODO need to make conditional on phenology
+  trait.samples[["stoma_psi_b"]] <- trait.samples[["leaf_psi_tlp"]]
+  
+  ## convert wood_water_cap / 1000
+  if(n %in% names(trait.samples)){
+    trait.samples[["wood_water_cap"]] <- as.numeric(trait.samples[["wood_water_cap"]])/1000
+  }
+  
+  ## convert leaf_water_cap / 1000
+  if(n %in% names(trait.samples)){
+    trait.samples[["leaf_water_cap"]] <- as.numeric(trait.samples[["leaf_water_cap"]])/1000
+  }
+  
+  ## convert b1Rd to negative
+  if(n %in% names(trait.samples)){
+    trait.samples[["b1Rd"]] <- -as.numeric(trait.samples[["b1Rd"]])
+  } 
+  
   # for debugging conversions save(trait.samples, file = file.path(settings$outdir,
   # 'trait.samples.Rdata'))
   
@@ -131,7 +157,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
     revision <- model$revision
   }
   revision <- gsub("^r", "", revision)
-
+  
   if (!is.null(settings$model$edin) && file.exists(settings$model$edin)) {
     ed2in.text <- read_ed2in(settings$model$edin)
   } else {
@@ -145,7 +171,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
     PEcAn.logger::logger.info("Using", filename, "as template")
     ed2in.text <- read_ed2in(filename)
   }
-
+  
   ed2in.text <- modify_ed2in(
     ed2in.text,
     latitude = as.numeric(settings$run$site$lat),
@@ -157,7 +183,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
     add_if_missing = TRUE,
     check_paths = check
   )
-
+  
   # The flag for IMETAVG tells ED what to do given how input radiation
   # was originally averaged
   # -1 = I don't know, use linear interpolation (default)
@@ -165,7 +191,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   # 1 = Averages ending at the reference time
   # 2 = Averages beginning at the reference time
   # 3 = Averages centered at the reference time
-
+  
   # By default, modify_ed2in sets the met start and end dates to run
   # start and end dates, respectively. However, the `met.start` and
   # `met.end` XML tags may be used to set these to different values,
@@ -199,11 +225,11 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   }
   ed2in.text <- proc_met_startend(settings[[c("run", "site", "met.start")]], "METCYC1")
   ed2in.text <- proc_met_startend(settings[[c("run", "site", "met.end")]], "METCYCF")
-
+  
   if (is.null(settings$model$phenol.scheme)) {
     PEcAn.logger::logger.error(paste0("no phenology scheme set; \n",
-                                     "need to add <phenol.scheme> ",
-                                     "tag under <model> tag in settings file"))
+                                      "need to add <phenol.scheme> ",
+                                      "tag under <model> tag in settings file"))
   } else if (settings$model$phenol.scheme == 1) {
     ## Set prescribed phenology switch in ED2IN
     ed2in.text <- modify_ed2in(
@@ -231,7 +257,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
       check_paths    = check
     )
   }
-
+  
   ## -------------
   # Special parameters for SDA
   # 
@@ -249,7 +275,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
     }
     ed2in.text <- modify_ed2in(ed2in.text, .dots = sda_tags, add_if_missing = TRUE, check_paths = check)
   }
-
+  
   ##----------------------------------------------------------------------
   # Get prefix of filename, append to dirname.
   # Assumes pattern 'DIR/PREFIX.lat<REMAINDER OF FILENAME>'
@@ -287,7 +313,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
         PEcAn.logger::logger.severe("ED2 sites/pss/ files have different prefix")
       } else {
         # sites and pass same prefix name, case 3
-        value <- 3
+        value <- 6
       }
       
     }
@@ -300,12 +326,12 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
     )
   }
   
-
+  
   thsum <- settings$run$inputs$thsum$path
   if (!grepl("/$", thsum)) {
     thsum <- paste0(thsum, "/")
   }
-
+  
   ed2in.text <- modify_ed2in(
     ed2in.text,
     VEG_DATABASE = settings$run$inputs$veg$path,
@@ -330,7 +356,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
     add_if_missing = TRUE,
     check_paths = check
   )
-
+  
   ##---------------------------------------------------------------------
   # Use all PFTs, or just the ones configured in config.xml?
   all_pfts <- settings$model$all_pfts
@@ -363,7 +389,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   if (!is.null(custom_tags)) {
     # Convert numeric tags to numeric
     # Anything that isn't converted to NA via `as.numeric` is numeric
-    custom_tags <- lapply(custom_tags,
+    custom_tags <- lapply(custom_tags, function(x)
                           tryCatch(as.numeric(x), warning = function(e) x))
     # Figure out what is a numeric vector
     # Look for a list of numbers like: "1,2,5"
@@ -382,7 +408,7 @@ write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings
   if (check) {
     check_ed2in(ed2in.text)
   }
-
+  
   barebones <- settings$model$barebones_ed2in
   if (!is.null(barebones) && !isFALSE(barebones) && barebones != "false") barebones <- TRUE
   write_ed2in(ed2in.text, file.path(settings$rundir, run.id, "ED2IN"), barebones = barebones)
@@ -439,7 +465,7 @@ remove.config.ED2 <- function(main.outdir = settings$outdir, settings) {
 #' @return R XML object containing full ED2 XML file
 #' @author David LeBauer, Shawn Serbin, Carl Davidson, Alexey Shiklomanov
 write.config.xml.ED2 <- function(settings, trait.values, defaults = settings$constants) {
-
+  
   ## Find history file TODO this should come from the database
   ed2_package_data <- data(package="PEcAn.ED2")
   histfile <- paste0("history.r", settings$model$revision) # set history file name to look for in ed2_package_data
@@ -453,13 +479,13 @@ write.config.xml.ED2 <- function(settings, trait.values, defaults = settings$con
     data(list=histfile, package = 'PEcAn.ED2')
     edhistory <- get(histfile)
   }
-
+  
   edtraits <- names(edhistory)
   data(pftmapping, package = 'PEcAn.ED2')
   
   ## Get ED2 specific model settings and put into output config xml file
   xml <- PEcAn.settings::listToXml(settings$model$config.header, "config")
-
+  
   ## Process the names in defaults. Runs only if names(defaults) are null or have at least one
   ## instance of name attribute 'pft'. Otherwise, AS assumes that names in defaults are already set
   ## to the corresponding PFT names.
@@ -469,13 +495,13 @@ write.config.xml.ED2 <- function(settings, trait.values, defaults = settings$con
     newnames.notnull <- which(!sapply(newnames, is.null))
     names(defaults)[newnames.notnull] <- newnames[newnames.notnull]
   }
-
+  
   for (i in seq_along(trait.values)) {
     group <- names(trait.values)[i]
     if (group == "env") {
-
+      
       ## set defaults from config.header
-
+      
     } else {
       # Make this agnostic to the way PFT names are defined in `trait.values` -- either directly as
       # list names or as object 'name' within each sublist is fine
@@ -484,12 +510,12 @@ write.config.xml.ED2 <- function(settings, trait.values, defaults = settings$con
       } else {
         pft <- group
       }
-
+      
       # This is the ED PFT number (1-17; see comments in ED2IN file
       # for PFT definitions). It is used to set any ED parameters that
       # are not set explicitly from PEcAn.
       pft.number <- settings[["pfts"]][[i]][["ed2_pft_number"]]
-
+      
       if (is.null(pft.number)) {
         pft.number <- pftmapping$ED[which(pftmapping == pft)]
         PEcAn.logger::logger.debug(glue::glue(
@@ -498,18 +524,18 @@ write.config.xml.ED2 <- function(settings, trait.values, defaults = settings$con
           "set the PFT number explicitly via the `<ed2_pft_number>` XML tag."
         ))
       }
-
+      
       if (grepl("soil", pft)) {
         data(soil, package = "PEcAn.ED2")
         vals <- as.list(soil)
         names(vals) <- colnames(soil)
-
+        
         converted.trait.values <- convert.samples.ED(trait.values[[i]])
         vals <- modifyList(vals, converted.trait.values)
-
+        
         decompositon.xml <- PEcAn.settings::listToXml(vals, "decomposition")
         xml <- XML::append.xmlNode(xml, decompositon.xml)
-
+        
       } else if (length(pft.number) == 0) {
         PEcAn.logger::logger.severe(glue::glue(
           "Unable to set PFT number automatically. ",
@@ -519,29 +545,29 @@ write.config.xml.ED2 <- function(settings, trait.values, defaults = settings$con
           "or add the PFT to `pftmapping.csv` file in ",
           "`models/ed/data/pftmapping.csv`."
         ))
-
+        
       } else {
         ## Get default trait values from ED history
         vals <- as.list(edhistory[edhistory$num == pft.number, ])
-
+        
         ## Convert trait values to ED units
         converted.trait.values <- convert.samples.ED(trait.values[[i]])
-
+        
         ## Selectively replace defaults with trait values
         vals <- modifyList(vals, converted.trait.values)
-
+        
         ## Convert settings constants to ED units
         converted.defaults <- convert.samples.ED(defaults[[pft]]$constants)
-
+        
         ## Selectively replace defaults and trait values with constants from settings
         if (!is.null(converted.defaults)){
           vals <- modifyList(vals, converted.defaults)
         }
-
+        
         pft.xml <- PEcAn.settings::listToXml(vals, "pft")
         xml <- XML::append.xmlNode(xml, pft.xml)
       }
-
+      
     }
   }
   return(xml)
@@ -565,7 +591,7 @@ write.config.jobsh.ED2 <- function(settings, run.id) {
   # find out where to write run/ouput
   rundir <- file.path(settings$host$rundir, run.id)
   outdir <- file.path(settings$host$outdir, run.id)
-
+  
   # command if scratch is used
   if (is.null(settings$host$scratchdir)) {
     modeloutdir <- outdir
@@ -591,7 +617,7 @@ write.config.jobsh.ED2 <- function(settings, run.id) {
   } else {
     jobsh <- readLines(con = system.file("template.job", package = "PEcAn.ED2"), n = -1)
   }
-
+  
   # create host specific setttings
   hostsetup <- ""
   if (!is.null(settings$model$prerun)) {
@@ -600,7 +626,7 @@ write.config.jobsh.ED2 <- function(settings, run.id) {
   if (!is.null(settings$host$prerun)) {
     hostsetup <- paste(hostsetup, sep = "\n", paste(settings$host$prerun, collapse = "\n"))
   }
-
+  
   hostteardown <- ""
   if (!is.null(settings$model$postrun)) {
     hostteardown <- paste(hostteardown, sep = "\n", paste(settings$model$postrun, collapse = "\n"))
@@ -608,19 +634,19 @@ write.config.jobsh.ED2 <- function(settings, run.id) {
   if (!is.null(settings$host$postrun)) {
     hostteardown <- paste(hostteardown, sep = "\n", paste(settings$host$postrun, collapse = "\n"))
   }
-
+  
   # create job.sh
   jobsh <- gsub("@HOST_SETUP@", hostsetup, jobsh)
   jobsh <- gsub("@HOST_TEARDOWN@", hostteardown, jobsh)
-
+  
   jobsh <- gsub("@SITE_LAT@", settings$run$site$lat, jobsh)
   jobsh <- gsub("@SITE_LON@", settings$run$site$lon, jobsh)
   jobsh <- gsub("@SITE_MET@", settings$run$inputs$met$path, jobsh)
-
+  
   jobsh <- gsub("@SCRATCH_MKDIR@", mkdirscratch, jobsh)
   jobsh <- gsub("@SCRATCH_COPY@", copyscratch, jobsh)
   jobsh <- gsub("@SCRATCH_CLEAR@", clearscratch, jobsh)
-
+  
   jobsh <- gsub("@START_DATE@", settings$run$start.date, jobsh)
   jobsh <- gsub("@END_DATE@", settings$run$end.date, jobsh)
   
