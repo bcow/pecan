@@ -76,10 +76,9 @@ get.trait.data.pft <- function(pft, modeltype, dbfiles, dbcon, trait.names,
   trait.data.check <- PEcAn.DB::query.traits(ids = pft_members$id, priors = traits, con = dbcon, update.check.only = TRUE, ids_are_cultivars = (pfttype=="cultivar"))
   traits <- names(trait.data.check)
   
-  # Set forceupdate FALSE if it's a string (backwards compatible with 'AUTO' flag used in the past)
-  if (!is.logical(forceupdate)) {
-    forceupdate <- FALSE
-  }
+  # Make sure forceupdate is logical 
+  # and backwards compatible with 'AUTO' flag used in the past
+  forceupdate <- isTRUE(as.logical(forceupdate))
   
   # check to see if we need to update
   if (!forceupdate) {
@@ -194,9 +193,9 @@ get.trait.data.pft <- function(pft, modeltype, dbfiles, dbcon, trait.names,
             PEcAn.logger::logger.warn("New and existing trait data are both empty. Skipping this check.")
           } else {
             current_traits <- dplyr::bind_rows(trait.data.check, .id = "trait") %>%
-              dplyr::select(-mean, -stat)
+              dplyr::select(-mean, -stat) 
             existing_traits <- dplyr::bind_rows(existing_trait_data, .id = "trait") %>%
-              dplyr::select(-mean, -stat)
+              dplyr::select(-mean, -stat) 
             diff_traits <- symmetric_setdiff(current_traits, existing_traits)
             if (nrow(diff_traits) > 0) {
               diff_summary <- diff_traits %>%
