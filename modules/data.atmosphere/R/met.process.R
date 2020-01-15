@@ -142,13 +142,12 @@ met.process <- function(site, input_met, start_date, end_date, model,
            ))
   }
   #--- If the met source is local then there is no need for download
+  stage$local <- FALSE
   if (!is.null(register$Local)){
     if (as.logical(register$Local)) {
       stage$download.raw <- FALSE
       stage$local <- TRUE
     }
-  }else{
-    stage$local <- FALSE
   }
   
   PEcAn.logger::logger.debug(stage)
