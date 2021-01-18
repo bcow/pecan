@@ -17,10 +17,12 @@
 ##' @param dbcon database connection
 ##' @param forceupdate set this to true to force an update, auto will check to see if an update is needed.
 ##' @param trait.names list of trait names to retrieve
+##' @param omit.trait.data list of trait names that to be excluded (from full meta analysis)
 ##' @return updated pft with posteriorid
 ##' @author David LeBauer, Shawn Serbin, Rob Kooper
 ##' @export
-get.trait.data.pft <- function(pft, modeltype, dbfiles, dbcon, trait.names,
+get.trait.data.pft <- function(pft, modeltype, dbfiles, dbcon, 
+                               trait.names, omit.trait.data,
                                forceupdate = FALSE) {
   
   # Create directory if necessary
@@ -75,6 +77,9 @@ get.trait.data.pft <- function(pft, modeltype, dbfiles, dbcon, trait.names,
   # get the trait data (don't bother sampling derived traits until after update check)
   trait.data.check <- PEcAn.DB::query.traits(ids = pft_members$id, priors = traits, con = dbcon, update.check.only = TRUE, ids_are_cultivars = (pfttype=="cultivar"))
   traits <- names(trait.data.check)
+  # don't sample traits that were listed in the settings
+  # specifically to compare constrained vs. unconstrained runs
+  if(!is.null(omit.trait.data)) traits <- setdiff(traits, omit.trait.data)
   
   # Make sure forceupdate is logical 
   # and backwards compatible with 'AUTO' flag used in the past
@@ -266,6 +271,8 @@ get.trait.data.pft <- function(pft, modeltype, dbfiles, dbcon, trait.names,
                              update.check.only = FALSE,
                              ids_are_cultivars = (pfttype == "cultivar"))
   traits <- names(trait.data)
+  
+  
   
   if (length(trait.data) > 0) {
     trait_counts <- trait.data %>%
