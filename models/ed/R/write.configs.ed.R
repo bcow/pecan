@@ -34,22 +34,26 @@ convert.samples.ED <- function(trait.samples) {
   trait.samples <- as.list(trait.samples)
   
   if ("SLA" %in% names(trait.samples)) {
+    logger.debug("converting SLA to put in ED2IN")
     sla <- as.numeric(trait.samples[["SLA"]])
     trait.samples[["SLA"]] <- sla/DEFAULT.LEAF.C
   }
   
   # for model version compatibility (q and fineroot2leaf are the same)
   if ("fineroot2leaf" %in% names(trait.samples)) {
+    logger.debug("converting fineroot2leaf to q to put in ED2IN")
     trait.samples[["q"]] <- as.numeric(trait.samples[["fineroot2leaf"]])
   }
   
   ## convert leaf width / 1000
   if ("leaf_width" %in% names(trait.samples)) {
+    logger.debug("converting leaf_width to put in ED2IN")
     lw <- as.numeric(trait.samples[["leaf_width"]])
     trait.samples[["leaf_width"]] <- lw / 1000
   }
   
   if ("root_respiration_rate" %in% names(trait.samples)) {
+    logger.debug("converting root_respiration_rate to put in ED2IN")
     rrr1 <- as.numeric(trait.samples[["root_respiration_rate"]])
     rrr2 <- rrr1 * DEFAULT.MAINTENANCE.RESPIRATION
     trait.samples[["root_respiration_rate"]] <- arrhenius.scaling(rrr2, old.temp = 25, new.temp = 15)
@@ -58,6 +62,7 @@ convert.samples.ED <- function(trait.samples) {
   }
   
   if ("Vcmax" %in% names(trait.samples)) {
+    logger.debug("converting Vcmax to Vm0 to put in ED2IN")
     vcmax <- as.numeric(trait.samples[["Vcmax"]])
     trait.samples[["Vcmax"]] <- arrhenius.scaling(vcmax, old.temp = 25, new.temp = 15)
     # write as Vm0 for version compatibility (Vm0 = Vcmax @ 15C)
@@ -77,6 +82,8 @@ convert.samples.ED <- function(trait.samples) {
       trait.samples[["dark_respiration_factor"]] <- 
         trait.samples[["leaf_respiration_rate_m2"]] / trait.samples[["Vcmax"]]
       
+      logger.debug("converting leaf_respiration_rate_m2 to Rd0 to put in ED2IN")
+      logger.debug("creating dark_respiration_factor to put in ED2IN")
       
     }  ## End dark_respiration_factor loop
   }  ## End Vcmax  
@@ -84,26 +91,47 @@ convert.samples.ED <- function(trait.samples) {
   # All psi traits need to be negative
   for(n in c("leaf_psi_tlp", "wood_psi_tlp", "leaf_psi_min", "wood_psi_min", "wood_psi50")){
     if(n %in% names(trait.samples)){
+      logger.debug(paste("converting ", n, " to put in ED2IN"))
       trait.samples[[n]] <- -as.numeric(trait.samples[[n]])
     }
   }
+  
   # direct comparison only true if not using phenology 
   # :TODO need to make conditional on phenology
+  logger.debug("converting leaf_psi_tlp to stoma_psi_b to put in ED2IN")
   trait.samples[["stoma_psi_b"]] <- trait.samples[["leaf_psi_tlp"]]
   
   ## convert wood_water_cap / 1000
-  if(n %in% names(trait.samples)){
+  ## Values multiplied by 1000 in the database to make fitting distributions easier
+  if("wood_water_cap" %in% names(trait.samples)){
+    logger.debug("converting wood_water_cap to put in ED2IN")
     trait.samples[["wood_water_cap"]] <- as.numeric(trait.samples[["wood_water_cap"]])/1000
   }
   
   ## convert leaf_water_cap / 1000
-  if(n %in% names(trait.samples)){
+  ## Values multiplied by 1000 in the database to make fitting distributions easier
+  if("leaf_water_cap" %in% names(trait.samples)){
+    logger.debug("converting leaf_water_cap to put in ED2IN")
     trait.samples[["leaf_water_cap"]] <- as.numeric(trait.samples[["leaf_water_cap"]])/1000
   }
   
   ## convert b1Rd to negative
-  if(n %in% names(trait.samples)){
+  if("b1Rd" %in% names(trait.samples)){
+    logger.debug("converting b1Rd to put in ED2IN")
     trait.samples[["b1Rd"]] <- -as.numeric(trait.samples[["b1Rd"]])
+  } 
+  
+  ## convert b1Bl_large to b1Bl and b2Bl_large to b2Bl 
+  ## for compatibility between ED2.1 and ED2.2
+  
+  if("b1Bl_large" %in% names(trait.samples)){
+    logger.debug("converting b1Bl_large to put in b1Bl")
+    trait.samples[["b1Bl"]] <- as.numeric(trait.samples[["b1Bl_large"]])
+  } 
+  
+  if("b2Bl_large" %in% names(trait.samples)){
+    logger.debug("converting b2Bl_large to put in b2Bl")
+    trait.samples[["b2Bl"]] <- as.numeric(trait.samples[["b2Bl_large"]])
   } 
   
   # for debugging conversions save(trait.samples, file = file.path(settings$outdir,
@@ -131,7 +159,7 @@ convert.samples.ED <- function(trait.samples) {
 ##' 
 ##' @return configuration file and ED2IN namelist for given run
 ##' @export
-##' @author David LeBauer, Shawn Serbin, Carl Davidson, Alexey Shiklomanov, Istem Fer
+##' @author David LeBauer, Shawn Serbin, Carl Davidson, Alexey Shiklomanov, Istem Fer, Elizabeth Cowdery
 ##-------------------------------------------------------------------------------------------------#
 write.config.ED2 <- function(trait.values, settings, run.id, defaults = settings$constants, check = FALSE, ...) {
   
