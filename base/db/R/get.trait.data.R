@@ -27,11 +27,12 @@
 ##' @param trait.names Character vector of trait names to search. If
 ##'   `NULL` (default), use all traits that have a prior for at least
 ##'   one of the `pfts`.
+##' @param omit.trait.data list of trait names that to be excluded (from full meta analysis)
 ##' @return list of PFTs with update posteriorids
 ##' @author David LeBauer, Shawn Serbin, Alexey Shiklomanov
 ##' @export
 get.trait.data <- function(pfts, modeltype, dbfiles, database, forceupdate,
-                           trait.names = NULL) {
+                           trait.names = NULL, omit.trait.data = NULL) {
   if (!is.list(pfts)) {
     PEcAn.logger::logger.severe('pfts must be a list')
   }
@@ -69,7 +70,8 @@ get.trait.data <- function(pfts, modeltype, dbfiles, database, forceupdate,
                    dbfiles = dbfiles,
                    dbcon = dbcon,
                    forceupdate = forceupdate,
-                   trait.names = trait.names)
+                   trait.names = trait.names,
+                   omit.trait.data = omit.trait.data)
   
   invisible(result)
 }
