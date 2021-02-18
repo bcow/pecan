@@ -8,112 +8,129 @@
 ##' @author Betsy Cowdery, Ankur Desai, Istem Fer
 ##'
 query.format.vars <- function(bety, input.id=NA, format.id=NA, var.ids=NA) {
-
+  
   if ((is.null(input.id)||is.na(input.id)) & (is.null(format.id)||is.na(format.id))){
     PEcAn.logger::logger.error("Must specify input id or format id")
   }
-
+  
   # get input info either form input.id or format.id, depending which is provided
   # defaults to format.id if both provided
   # also query site information (id/lat/lon) if an input.id
-
+  
   site.id <- NULL
   site.lat <- NULL
   site.lon <- NULL
   site.time_zone <- NULL
-
+  
   if (is.na(format.id)) {
-    f <- PEcAn.DB::db.query(
-        query = paste("SELECT * from formats as f join inputs as i on f.id = i.format_id where i.id = ", input.id),
-        con = bety
-      )
-    site.id <- PEcAn.DB::db.query(query = paste("SELECT site_id from inputs where id =", input.id), con = bety)
-    if (is.data.frame(site.id) && nrow(site.id)>0) {
-      site.id <- site.id$site_id
-      site.info <-
-        PEcAn.DB::db.query(
-          query = paste(
-            "SELECT id, time_zone, ST_X(ST_CENTROID(geometry)) AS lon, ST_Y(ST_CENTROID(geometry)) AS lat FROM sites WHERE id =",
-            site.id
-          ),
-          con = bety
-        )
-      site.lat <- site.info$lat
-      site.lon <- site.info$lon
-      site.time_zone <- site.info$time_zone
-    }
+    
+    f <- tbl(bety, 'inputs') %>% filter(id == input.id) %>% 
+      dplyr::select(-c("notes", "created_at", "updated_at")) %>% 
+      rename(input_name = "name", input_id = "id") %>%
+      left_join( tbl(bety, 'formats') %>% 
+                   rename(format_name = "name", format_id = "id"),
+                 by = "format_id") %>% collect() %>% 
+      hablar::convert(hablar::int(
+        input_id,
+        site_id, 
+        parent_id,
+        user_id,
+        format_id, 
+        mimetype_id
+      ))
+    
+    
+    # I don't really like how I set up site information, 
+    # but we can clean this up later
+    
+    site.id <- f$site_id
+    site.info <- PEcAn.DB::query.site(site.id, bety)
+    
+    site.lat <- site.info$lat
+    site.lon <- site.info$lon
+    site.time_zone <- site.info$time_zone
+    
+    
   } else {
-    f <- PEcAn.DB::db.query(query = paste("SELECT * from formats where id = ", format.id), con = bety)
+    f <- tbl(bety, 'formats') %>% filter(id == format.id) %>% collect() %>% 
+      hablar::convert(hablar::int(
+        input_id,
+        site_id, 
+        parent_id,
+        user_id,
+        format_id, 
+        mimetype_id
+      ))
   }
-
-  mimetype <- PEcAn.DB::db.query(query = paste("SELECT * from  mimetypes where id = ", f$mimetype_id), con = bety)[["type_string"]]
-  f$mimetype <- utils::tail(unlist(strsplit(mimetype, "/")),1)
-
+  
+  f$mimetype <- tbl(bety, 'mimetypes') %>% filter(id == !!f$mimetype_id) %>% 
+    pull("type_string") %>% 
+    stringr::str_split( "/", simplify = TRUE) %>% 
+    last()
+  
   # get variable names and units of input data
-  fv <- PEcAn.DB::db.query(
-    query = paste(
-      "SELECT variable_id,name,unit,storage_type,column_number from formats_variables where format_id = ", f$id
-    ),
-    con = bety
-  )
-
+  
+  fv <- tbl(bety, 'formats_variables') %>% filter(format_id == !!f$format_id) %>%
+    dplyr::select("variable_id","name","unit","storage_type","column_number") %>% 
+    collect() %>% 
+    hablar::convert(hablar::int(variable_id, column_number))
+  
   if(all(!is.na(var.ids))){
     # Need to subset the formats table
     fv <- fv %>% dplyr::filter(variable_id %in% !!var.ids | storage_type != "")
-    if(dim(fv)[1] == 0){
+    if(nrow(fv) == 0){
       PEcAn.logger::logger.error("None of your requested variables are available")
     }
-
+    
   }
-
+  
   if (nrow(fv)>0) {
     colnames(fv) <- c("variable_id", "input_name", "input_units", "storage_type", "column_number")
-    fv$variable_id <- as.numeric(fv$variable_id)
-    n <- dim(fv)[1]
-
+    n <- nrow(fv)
+    
     # get bety names and units
     vars <- as.data.frame(matrix(NA, ncol=2, nrow=n))
     colnames(vars) <- c("bety_name", "bety_units")
-
+    
     # fv and vars need to go together from now on,
-    # otherwise when there are more than one of the same variable_id it confuses merge
+    # otherwise when there are more than one of the 
+    # same variable_id it confuses merge
+
     vars_bety <- cbind(fv, vars)
     for(i in 1:n){
       vars_bety[i, (ncol(vars_bety) - 1):ncol(vars_bety)] <-
-        as.matrix(PEcAn.DB::db.query(
-          query = paste("SELECT name, units from variables where id = ", fv$variable_id[i]),
-          con = bety
-        ))
+        tbl(bety, 'variables') %>% filter(id == !!fv$variable_id[i]) %>% 
+        dplyr::select("name", "units") %>% collect()
     }
-
+    
     # Fill in input names and units with bety names and units if they are missing
-
+    
     ind1 <- fv$input_name == ""
     vars_bety$input_name[ind1] <- vars_bety$bety_name[ind1]
     ind2 <- fv$input_units == ""
     vars_bety$input_units[ind2] <- vars_bety$bety_units[ind2]
-
+    
     # Fill in CF vars
     # This will ultimately be useful when looking at met variables where CF != Bety
-
+    
     #Fill in MstMIP vars
     #All PEcAn output is in MstMIP variables
-
+    
     vars_full <- bety2pecan(vars_bety)
-
+    
     header <- as.numeric(f$header)
     skip <- ifelse(is.na(as.numeric(f$skip)),0,as.numeric(f$skip))
-
+    
     # Right now I'm making the inappropriate assumption that storage type will be
     # empty unless it's a time variable.
     # This is because I haven't come up for a good way to test that a character string is a date format
-
+    
     st <- vars_full$storage_type
     time.row <- which(nchar(st)>1 & substr(st, 1,1) == "%")
     if(length(time.row) == 0) time.row <- NULL
-
+    
     # Final format list
-    format <- list(file_name = f$name,
+    format <- list(file_name = f$format_name,
                    mimetype = f$mimetype,
                    vars = vars_full,
                    skip = skip,
@@ -125,26 +142,26 @@ query.format.vars <- function(bety, input.id=NA, format.id=NA, var.ids=NA) {
                    lon = site.lon,
                    time_zone = site.time_zone
     )
-
+    
     # Check that all bety units are convertible. If not, throw a warning.
     for (i in 1:length(format$vars$bety_units)) {
-
+      
       if (format$vars$storage_type[i] != "") { #units with storage type are a special case
-
+        
         # This would be a good place to put a test for valid sotrage types. Currently not implemented.
-
+        
       } else if (udunits2::ud.are.convertible(format$vars$input_units[i], format$vars$pecan_units[i]) == FALSE) {
-
+        
         if (PEcAn.utils::misc.are.convertible(format$vars$input_units[i], format$vars$pecan_units[i]) == FALSE) {
           PEcAn.logger::logger.warn("Units not convertible for",format$vars$input_name[i], "with units of",format$vars$input_units[i], ".  Please make sure the varible has units that can be converted to", format$vars$pecan_units[i])
         }
-
+        
       }
     }
-
-
+    
+    
   } else {
-    format <- list(file_name = f$name,
+    format <- list(file_name = f$format_name,
                    mimetype = f$mimetype,
                    na.strings=c("-9999","-6999","9999"), # This shouldn't be hardcoded in, but not specified in format table ?
                    time.row = NULL,
@@ -161,8 +178,8 @@ query.format.vars <- function(bety, input.id=NA, format.id=NA, var.ids=NA) {
       ". If format is not wide format, check column(s)", format$vars$pecan_name[-unique_cols]
     )
   }
-
-
+  
+  
   return(format)
 }
 ################################################################################
@@ -177,7 +194,7 @@ bety2pecan <- function(vars_bety){
   
   # This needs to be moved to lazy load 
   bety_mstmip <- utils::read.csv(system.file("bety_mstmip_lookup.csv", package= "PEcAn.DB"), 
-                          header = T, stringsAsFactors = FALSE)
+                                 header = T, stringsAsFactors = FALSE)
   
   vars_full <- merge(vars_bety, bety_mstmip, by = "bety_name", all.x = TRUE)
   
