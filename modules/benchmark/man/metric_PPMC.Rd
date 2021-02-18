@@ -4,10 +4,12 @@
 \alias{metric_PPMC}
 \title{Pearson Product Moment Correlation}
 \usage{
-metric_PPMC(metric_dat, ...)
+metric_PPMC(metric_dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{metric_dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Pearson Product Moment Correlation

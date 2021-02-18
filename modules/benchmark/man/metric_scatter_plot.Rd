@@ -7,6 +7,7 @@
 metric_scatter_plot(
   metric_dat,
   var,
+  calc_method = "single_calc",
   filename = NA,
   draw.plot = is.na(filename)
 )

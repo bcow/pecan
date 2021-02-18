@@ -4,10 +4,12 @@
 \alias{metric_RAE}
 \title{Relative Absolute Error}
 \usage{
-metric_RAE(metric_dat, ...)
+metric_RAE(metric_dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{metric_dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Relative Absolute Error

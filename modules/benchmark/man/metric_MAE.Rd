@@ -4,10 +4,12 @@
 \alias{metric_MAE}
 \title{Mean Absolute Error}
 \usage{
-metric_MAE(dat, ...)
+metric_MAE(dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Mean Absolute Error

@@ -4,10 +4,12 @@
 \alias{metric_Frechet}
 \title{Frechet Distance}
 \usage{
-metric_Frechet(metric_dat, ...)
+metric_Frechet(metric_dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{metric_dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Frechet Distance

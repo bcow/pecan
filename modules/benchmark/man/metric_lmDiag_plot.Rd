@@ -4,10 +4,18 @@
 \alias{metric_lmDiag_plot}
 \title{Linear Regression Diagnostic Plot}
 \usage{
-metric_lmDiag_plot(metric_dat, var, filename = NA, draw.plot = FALSE)
+metric_lmDiag_plot(
+  metric_dat,
+  var,
+  calc_method = "single_calc",
+  filename = NA,
+  draw.plot = FALSE
+)
 }
 \arguments{
 \item{metric_dat}{data.frame}
+
+\item{calc_method}{}
 }
 \description{
 Linear Regression Diagnostic Plot

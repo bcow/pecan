@@ -4,10 +4,12 @@
 \alias{metric_AME}
 \title{Absolute Maximum Error}
 \usage{
-metric_AME(dat, ...)
+metric_AME(dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Absolute Maximum Error

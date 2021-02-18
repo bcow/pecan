@@ -4,10 +4,12 @@
 \alias{metric_MSE}
 \title{Mean Square Error}
 \usage{
-metric_MSE(dat, ...)
+metric_MSE(dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Mean Square Error

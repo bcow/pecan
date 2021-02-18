@@ -4,10 +4,12 @@
 \alias{metric_R2}
 \title{Coefficient of Determination (R2)}
 \usage{
-metric_R2(metric_dat, ...)
+metric_R2(metric_dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{metric_dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Coefficient of Determination (R2)

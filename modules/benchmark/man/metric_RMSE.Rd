@@ -4,10 +4,12 @@
 \alias{metric_RMSE}
 \title{Root Mean Square Error}
 \usage{
-metric_RMSE(dat, ...)
+metric_RMSE(dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Root Mean Square Error

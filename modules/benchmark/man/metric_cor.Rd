@@ -4,10 +4,12 @@
 \alias{metric_cor}
 \title{Correlation Coefficient}
 \usage{
-metric_cor(dat, ...)
+metric_cor(dat, calc_method = "single_calc", ...)
 }
 \arguments{
 \item{dat}{dataframe}
+
+\item{calc_method}{}
 }
 \description{
 Correlation Coefficient
