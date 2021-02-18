@@ -24,7 +24,7 @@ read_settings_BRR <- function(settings){
                               user     = settings$database$bety$user,
                               password = settings$database$bety$password)
   BRR <- tbl(bety,"reference_runs") %>% 
-    filter(id == settings$benchmarking$reference_run_id) %>% 
+    filter(id == !!settings$benchmarking$reference_run_id) %>% 
     collect()
   
   BRR.settings <- BRR %>% pull(settings) %>% unlist() %>%
@@ -115,7 +115,7 @@ bm_settings2pecan_settings <- function(bm.settings){
   out <- bm.settings["reference_run_id"]
   for(i in grep("benchmark", names(bm.settings))){
     print(bm.settings[i]$benchmark$benchmark_id)
-    out <- append(out, list(benchmark_id = bm.settings[i]$benchmark$benchmark_id))
+    out <- append(out, list(benchmark_id = !!bm.settings[i]$benchmark$benchmark_id))
   }
   return(out)
 } 
@@ -124,16 +124,17 @@ bm_settings2pecan_settings <- function(bm.settings){
 ##' @name check_BRR
 ##' @title Check whether a run has been registered as a reference run in BETY
 ##' @param settings_xml cleaned settings to be compared with BRR in the database
-##' @param con database connection
+##' @param bety database connection
 ##' @importFrom dplyr tbl filter collect
 ##' @export
 ##' @author Betsy Cowdery
 
-check_BRR <- function(settings_xml, con){
+check_BRR <- function(settings_xml, bety){
   # This is NOT a good way to find matching reference run records
   # Other options include comparing lists (slow)
-  # more spohisticated PSQL queries
-  # changing the settings field to jsonb 
-  ref_run <- tbl(con, "reference_runs") %>% filter(settings == settings_xml) %>% collect
+  # more sophisticated PSQL queries
+  # changing the settings field to json
+   
+  ref_run <- tbl(bety, "reference_runs") %>% filter(settings == settings_xml) %>% collect
   return(ref_run)
 }
