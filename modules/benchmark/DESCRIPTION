@@ -6,8 +6,9 @@ Date: 2019-09-05
 Authors@R: c(person("Mike","Dietze"),
              person("David","LeBauer"),
              person("Rob","Kooper"),
-             person("Toni", "Viskari"))
-Author: Michael Dietze, David LeBauer, Rob Kooper, Toni Viskari
+             person("Toni", "Viskari"),
+             person("Elizabeth", "Cowdery"))
+Author: Michael Dietze, David LeBauer, Rob Kooper, Toni Viskari, Elizabeth Cowdery
 Maintainer: Mike Dietze <dietze@bu.edu>
 Description: The Predictive Ecosystem Carbon Analyzer (PEcAn) is a scientific
     workflow management tool that is designed to simplify the management of
@@ -31,9 +32,12 @@ Imports:
     dbplyr,
     SimilarityMeasures,
     zoo,
-    stringr
+    stringr,
+    st,
+    hablar,
+    scoringRules,
+    purrr
 Suggests:
-    PEcAn.data.land,
     testthat (>= 2.0.0)
 License: BSD_3_clause + file LICENSE
 Copyright: Authors
