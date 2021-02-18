@@ -19,10 +19,14 @@ read_settings_BRR <- function(settings){
     return (settings)
   }
   
-  bety <- dplyr::src_postgres(dbname   = settings$database$bety$dbname,
-                              host     = settings$database$bety$host,
-                              user     = settings$database$bety$user,
-                              password = settings$database$bety$password)
+  dbparams <- get_postgres_envvars(host     = settings$database$bety$host,
+                                   dbname   = settings$database$bety$dbname,
+                                   driver   = settings$database$bety$driver,
+                                   user     = settings$database$bety$user,
+                                   password = settings$database$bety$password)
+  
+  bety <- PEcAn.DB::db.open(dbparams)
+  
   BRR <- tbl(bety,"reference_runs") %>% 
     filter(id == !!settings$benchmarking$reference_run_id) %>% 
     collect()
@@ -134,7 +138,7 @@ check_BRR <- function(settings_xml, bety){
   # Other options include comparing lists (slow)
   # more sophisticated PSQL queries
   # changing the settings field to json
-   
+  
   ref_run <- tbl(bety, "reference_runs") %>% filter(settings == settings_xml) %>% collect
   return(ref_run)
 }
