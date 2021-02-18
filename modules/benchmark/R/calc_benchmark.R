@@ -111,10 +111,9 @@ calc_benchmark <- function(settings, bety, start_year = NA, end_year = NA) {
       format_full <- format <- 
         PEcAn.DB::query.format.vars(input.id = input.id, 
                                     bety, format.id = NA, var.ids=var.ids)
+      time.row <- format$time.row
       
       # ---- LOAD INPUT DATA ---- #
-      
-      time.row <- format$time.row
       vars.used.index <- setdiff(seq_along(format$vars$variable_id), format$time.row)
       
       # For testing
@@ -131,8 +130,17 @@ calc_benchmark <- function(settings, bety, start_year = NA, end_year = NA) {
       
       # ---- LOAD MODEL DATA ---- #
       
-      #model_vars <- format$vars$pecan_name[-time.row]  # IF : what will happen when time.row is NULL? 
-      model_vars <- format$vars$pecan_name # time.row is NULL
+      
+      model_vars <- format$vars$pecan_name[-time.row]  
+      
+      
+      # Setup to deal with the question that Istem wrote,
+      # but doesn't actually fix anything yet .... 
+      # IF : what will happen when time.row is NULL?
+      if(is.na(time.row)){
+        model_vars <- format$vars$pecan_name # time.row is NULL
+      }
+      
       # For example 'AmeriFlux.level2.h.nc' format (38) has time vars year-day-hour listed, 
       # but storage type column is empty and it should be because in load_netcdf we extract
       # the time from netcdf files using the time dimension we can remove time variables from
@@ -151,12 +159,12 @@ calc_benchmark <- function(settings, bety, start_year = NA, end_year = NA) {
                                               start.year = start_year, 
                                               end.year = end_year,
                                               c("time", model_vars), dataframe = TRUE)
-          if(i%%100){print(i)}
+          if(i%%100==0){print(i)}
         }
         read.model <- read.model.list %>% purrr::map_dfc(dplyr::select, model_vars)
+        
+        remaining_cols <- setdiff(colnames(read.model.list[[1]]),colnames(read.model))
         read.model$posix <- read.model.list[[1]]$posix
-        read.model$time <- read.model.list[[1]]$time
-        read.model$year <- read.model.list[[1]]$year
       }else{
         read.model <- read.output(runid = run_ids, # should just be a single value 
                                   outdir = file.path(settings$modeloutdir,run_ids), 
@@ -172,9 +180,7 @@ calc_benchmark <- function(settings, bety, start_year = NA, end_year = NA) {
       
       model_names <- model_names %>% rowwise() %>%
         mutate(which_idx = case_when(v[1] %in% format$vars$pecan_name ~ TRUE,
-                                     TRUE ~ FALSE)
-               )
-
+                                     TRUE ~ FALSE))
       model_full <- model
       
       # ---- CALCULATE BENCHMARK SCORES ---- #
@@ -192,20 +198,17 @@ calc_benchmark <- function(settings, bety, start_year = NA, end_year = NA) {
           filter(benchmark_id == !!bm.ids[i]) %>% 
           left_join(tbl(bety, 'metrics') %>% rename(metric_id = id)) %>% collect()
         
-        # data("metric_ensemble_calc.csv", package = "PEcAn.benchmark")
-        metric_ensemble_calc <- read.csv("/fs/data3/ecowdery/pecan/modules/benchmark/data/metric_ensemble_calc.csv", stringsAsFactors = FALSE)
-        
+        data("metric_ensemble_calc", package = "PEcAn.benchmark")
         metrics <- left_join(metrics, metric_ensemble_calc) 
 
         #"run" metric needs to be removed from metrics so it isn't computed twice
-        var <- format$vars %>% filter(variable_id == !!bm$variable_id) %>% pull("pecan_name")
+        var <- format$vars %>% 
+          filter(variable_id == !!bm$variable_id) %>% 
+          pull("pecan_name")
         var.list <- c(var.list, var)
         
         obvs.calc <- obvs_full %>% dplyr::select("posix", all_of(var)) %>% 
           hablar::convert(hablar::num(all_of(var)))
-        
-        
-        model_names %>% mutate(vsubset )
         
         msub_idx <- model_names %>% rowwise() %>%
           mutate(vsubset = case_when(v[1] %in% c("posix", var) ~ TRUE,

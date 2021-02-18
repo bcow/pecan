@@ -4,12 +4,12 @@
 ##' @name create_BRR
 ##' @title Create benchmark reference run and ensemble
 ##' @param ens_wf table made from joining ensemble and workflow tables 
-##' @param con database connection
+##' @param bety database connection
 ##' @export 
 ##' 
 ##' @author Betsy Cowdery 
 
-create_BRR <- function(ens_wf, con, user_id = ""){
+create_BRR <- function(ens_wf, bety, user_id = ""){
   
   # cnd1 <- ens_wf$hostname == PEcAn.remote::fqdn() 
   # cnd2 <- ens_wf$hostname == 'test-pecan.bu.edu' & PEcAn.remote::fqdn() == 'pecan2.bu.edu'
@@ -18,7 +18,7 @@ create_BRR <- function(ens_wf, con, user_id = ""){
   
   clean <- PEcAn.benchmark::clean_settings_BRR(inputfile = file.path(ens_wf$folder,"pecan.CHECKED.xml"))
   settings_xml <- toString(PEcAn.settings::listToXml(clean, "pecan"))
-  ref_run <- PEcAn.benchmark::check_BRR(settings_xml, con)
+  ref_run <- PEcAn.benchmark::check_BRR(settings_xml, bety)
   
   if(length(ref_run) == 0){ # Make new reference run entry
     
@@ -31,13 +31,15 @@ create_BRR <- function(ens_wf, con, user_id = ""){
                     "VALUES(",ens_wf$model_id,", '",settings_xml,
                     "') RETURNING *;")
     }
-    ref_run <- PEcAn.DB::db.query(cmd, con)
+    ref_run <- PEcAn.DB::db.query(cmd, bety)
     
-  }else if(dim(ref_run)[1] > 1){# There shouldn't be more than one reference run with the same settings
+  }else if(nrow(ref_run) > 1){# There shouldn't be more than one reference run with the same settings
     PEcAn.logger::logger.error("There is more than one reference run in the database with these settings. Review for duplicates. ")
   }
-  BRR <- ref_run %>% dplyr::rename(.,reference_run_id = id)
+  BRR <- ref_run %>% dplyr::rename(reference_run_id = id)
   return(BRR)
+  
   # }else{logger.error(sprintf("Cannot create a benchmark reference run for a run on hostname: %s", 
   #                            ens_wf$hostname))}
-} #create_BRR
+  
+} # end create_BRR

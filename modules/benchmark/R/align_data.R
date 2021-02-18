@@ -11,7 +11,8 @@
 
 ## Align timeseries data using different functions
 
-align_data <- function(model.calc, obvs.calc, var, align_method = "match_timestep") {
+align_data <- function(model.calc, obvs.calc, var, 
+                       align_method = "match_timestep") {
   
   fcn <- match.fun(align_method)
   
@@ -81,7 +82,6 @@ align_data <- function(model.calc, obvs.calc, var, align_method = "match_timeste
   
   out1 <- date_subsets[[compare$type[coarse]]] %>% dplyr::select(.,one_of(var))
   colnames(out1) <- paste0(colnames(out1), ".", compare$type[coarse])
-  
   
   args <- list()
   if (mode.o != mode.m) {
