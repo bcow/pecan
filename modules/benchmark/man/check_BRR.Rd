@@ -4,12 +4,12 @@
 \alias{check_BRR}
 \title{Check whether a run has been registered as a reference run in BETY}
 \usage{
-check_BRR(settings_xml, con)
+check_BRR(settings_xml, bety)
 }
 \arguments{
 \item{settings_xml}{cleaned settings to be compared with BRR in the database}
 
-\item{con}{database connection}
+\item{bety}{database connection}
 }
 \description{
 Check whether a run has been registered as a reference run in BETY

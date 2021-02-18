@@ -4,12 +4,12 @@
 \alias{create_BRR}
 \title{Create benchmark reference run and ensemble}
 \usage{
-create_BRR(ens_wf, con, user_id = "")
+create_BRR(ens_wf, bety, user_id = "")
 }
 \arguments{
 \item{ens_wf}{table made from joining ensemble and workflow tables}
 
-\item{con}{database connection}
+\item{bety}{database connection}
 }
 \description{
 For each benchmark id, calculate metrics and update benchmarks_ensemble_scores
