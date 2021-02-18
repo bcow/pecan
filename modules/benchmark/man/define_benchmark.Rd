@@ -4,10 +4,12 @@
 \alias{define_benchmark}
 \title{Benchmark Definition: Retrieve or Create Bety Benchmarking Records}
 \usage{
-define_benchmark(settings, bety)
+define_benchmark(bm.settings, dbcon, user_id = "")
 }
 \arguments{
 \item{bm.settings}{settings list}
+
+\item{dbcon}{database connection}
 }
 \value{
 updated settings list
