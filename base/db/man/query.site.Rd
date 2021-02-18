@@ -4,12 +4,12 @@
 \alias{query.site}
 \title{Given site_id, return site table}
 \usage{
-query.site(site.id, con)
+query.site(site_id, dbcon)
 }
 \arguments{
-\item{con}{: database connection}
-
 \item{site_id}{numeric}
+
+\item{dbcon}{: database connection}
 }
 \description{
 Given site_id, return site table
