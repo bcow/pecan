@@ -4,7 +4,15 @@
 \alias{calc_metrics}
 \title{calc_metrics}
 \usage{
-calc_metrics(model.calc, obvs.calc, var, metrics, ensemble.id, bm_dir)
+calc_metrics(
+  model.calc,
+  obvs.calc,
+  var,
+  metrics,
+  calc_method,
+  ensemble.id,
+  bm_dir
+)
 }
 \arguments{
 \item{model.calc}{model data}
@@ -14,6 +22,8 @@ calc_metrics(model.calc, obvs.calc, var, metrics, ensemble.id, bm_dir)
 \item{var}{variables to be used}
 
 \item{metrics}{metrics to be used}
+
+\item{calc_method}{}
 
 \item{ensemble.id}{id of ensemble run}
 
