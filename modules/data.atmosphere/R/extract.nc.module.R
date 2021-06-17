@@ -1,15 +1,15 @@
 ##' @export
-#' @importFrom PEcAn.utils convert.input logger.info
+##' @import dplyr
 .extract.nc.module <- function(cf.id, register, dir, met, str_ns, site, new.site, con, 
                                start_date, end_date, host, overwrite = FALSE) {
-  logger.info("Site Extraction")
+  PEcAn.logger::logger.info("Site Extraction")
   
   input.id <- cf.id[1]
   if(host$name == "localhost"){
     outfolder <- file.path(dir, paste0(met, "_CF_site_", str_ns))
   } else {
     if(is.null(host$folder)){
-      PEcAn.utils::logger.severe("host$folder required when running extract.nc.module for remote servers")
+      PEcAn.logger::logger.severe("host$folder required when running extract.nc.module for remote servers")
     } else {
       outfolder <- file.path(host$folder, paste0(met, "_CF_site_", str_ns))
     }
@@ -20,12 +20,16 @@
   formatname <- "CF Meteorology"
   mimetype   <- "application/x-netcdf"
   
-  ready.id <- convert.input(input.id = input.id, 
+if (exists(paste0("extract.nc.", met))) fcn <- paste0("extract.nc.", met)
+  
+
+  ready.id <- PEcAn.utils::convert.input(input.id = input.id, 
                             outfolder = outfolder, 
                             formatname = formatname, 
                             mimetype = mimetype, 
                             site.id = site$id, 
-                            start_date = start_date, end_date = end_date,
+                            start_date = start_date,
+                            end_date = end_date,
                             pkg = pkg, 
                             fcn = fcn, 
                             con = con, host = host, browndog = NULL, 
@@ -33,9 +37,11 @@
                             slat = new.site$lat, slon = new.site$lon,
                             newsite = new.site$id, 
                             overwrite = overwrite,
-                            exact.dates = FALSE)
+                            exact.dates = FALSE, 
+                            ensemble = register$ensemble %>% as.numeric())
   
-  logger.info("Finished Extracting Met")
+  PEcAn.logger::logger.info("Finished Extracting Met")
   
   return(ready.id)
 } # .extract.nc.module
+

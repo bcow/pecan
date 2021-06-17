@@ -39,21 +39,44 @@ veg2model.ED2 <- function(outfolder, veg_info, start_date, new_site, source){
   
   # for FIA these steps are unnecessary, it already has the pss info
   if(source != "FIA"){
-    time    <- ifelse(!is.null(pss$time), pss$time, start_year)
-    n.patch <- ifelse(!is.null(pss$n.patch), pss$n.patch, 1)
-    trk     <- ifelse(!is.null(pss$trk), pss$trk, 1)
-    age     <- ifelse(!is.null(pss$age), pss$age, 100)
+    if(!is.null(pss$time)){
+      time <- as.numeric(pss$time)
+    }else{
+      PEcAn.logger::logger.info("No year info passed via metadata, using start year: ", start_year)
+      time <- start_year
+    }
+    if(!is.null(pss$n.patch)){
+      n.patch <- as.numeric(pss$n.patch)
+    }else{
+      PEcAn.logger::logger.info("No patch number info passed via metadata, assuming 1 patch.")
+      n.patch <- 1
+    }
+    if(!is.null(pss$trk)){
+      trk <- as.numeric(pss$trk)
+    }else{
+      PEcAn.logger::logger.info("No trk info passed via metadata, assuming 1.")
+      trk <- 1
+    }
+    if(!is.null(pss$age)){
+      age <- as.numeric(pss$age)
+    }else{
+      PEcAn.logger::logger.info("No stand age info passed via metadata, assuming 100.")
+      age <- 100
+    }
+    if(!is.null(pss$area)){
+      area <- as.numeric(pss$area)
+    }else{
+      PEcAn.logger::logger.severe("No area info passed via metadata, please provide area of your plot in m2 under 'settings$run$inputs$css$metadata$area'.")
+    }
     
-    pss <- data.frame(time = time, patch = n.patch, trk = trk, age = age)
+    pss <- data.frame(time = rep(time, n.patch), patch = seq_len(n.patch), trk = rep(trk, n.patch), age = rep(age, n.patch))
     
-    PEcAn.utils::logger.info(paste0("Values used in the patch file - time:", 
+    PEcAn.logger::logger.info(paste0("Values used in the patch file - time:", 
                                     pss$time, ", patch:", pss$patch, ", trk:", 
                                     pss$trk, ", age:", pss$age))
     
     # TODO : soils can also be here, passed from settings
   }
-  
-  n.patch   <- nrow(pss)
   
   ## fill missing data w/ defaults
   pss$site  <- 1
@@ -63,7 +86,7 @@ veg2model.ED2 <- function(outfolder, veg_info, start_date, new_site, source){
   # Reorder columns
   pss <- pss[, c("site", "time", "patch", "trk", "age", "area", "water")]
   
-  # Add soil data
+  # Add soil data: Currently uses default values, will soil_process overwrite it afterwards?
   soil            <- c(1, 5, 5, 0.01, 0, 1, 1)  #soil C & N pools (biogeochem) defaults (fsc,stsc,stsl,ssc,psc,msn,fsn)
   soil.dat        <- as.data.frame(matrix(soil, n.patch, 7, byrow = TRUE))
   names(soil.dat) <- c("fsc", "stsc", "stsl", "ssc", "psc", "msn", "fsn")
@@ -80,36 +103,38 @@ veg2model.ED2 <- function(outfolder, veg_info, start_date, new_site, source){
   # might further need removing dead trees by mortality status
   # css <- remove_dead_trees()
 
-  if(is.null(css$patch)){
+  if(!is.null(css$Subplot)){
+    css$patch  <- css$Subplot
+  }else{
     css$patch  <- 1
   }
 
   # Remove rows that don't map to any patch
   css <- css[which(css$patch %in% pss$patch), ]
   if (nrow(css) == 0) {
-    logger.severe("No trees map to previously selected patches.")
+    PEcAn.logger::logger.severe("No trees map to previously selected patches.")
   } else {
-    logger.debug(paste0(nrow(css), " trees that map to selected patches."))
+    PEcAn.logger::logger.debug(paste0(nrow(css), " trees that map to selected patches."))
   }
 
     
   if(is.null(css$n)){ 
-    # will get back to giving sensical values
-    css$n <- 0.001
+    css$n <- 1/area
   }
   
   if(is.null(css$cohort)){ 
-    # will get back to giving sensical values
-    css$cohort <- 1:nrow(css)
+    # every tree is its own cohort, ED2 will fuse them or simulate them individually depending on max.cohort
+    css$cohort <-  do.call("c", lapply(seq_len(n.patch), function(x) 1:sum(css$patch==x))) 
   }
   
   inv.years <- as.numeric(unique(css$year))
   # suitable years
   av.years <- inv.years[inv.years <= start_year]
   if(length(av.years) == 0){
-    logger.severe("No available years found in the data.")
+    PEcAn.logger::logger.severe("No available years found in the data.")
   }
   css$time <- max(av.years)
+  
   # filter out other years
   css <- css[css$year == css$time, ]
   
@@ -124,14 +149,12 @@ veg2model.ED2 <- function(outfolder, veg_info, start_date, new_site, source){
   for (p in seq_along(css$pft)) {
     css$pft.number[p] <- pftmapping$ED[pftmapping$PEcAn == as.character(css$pft[p])]
     if (is.null(css$pft.number[p])) {
-      logger.severe(paste0("Couldn't find an ED2 PFT number for ", as.character(css$pft[p])))
+      PEcAn.logger::logger.severe(paste0("Couldn't find an ED2 PFT number for ", as.character(css$pft[p])))
     }
   }
   
-    
   # --- Continue work formatting css 
-  n.cohort                      <- nrow(css)
-  css$time[is.na(css$time)]     <- 1
+  css$time[is.na(css$time)]     <- start_year
   css$cohort[is.na(css$cohort)] <- 1:sum(is.na(css$cohort))
   css$dbh[is.na(css$dbh)]       <- 1  # assign nominal small dbh to missing
   density.median                <- median(css$n[which(css$n > 0)])

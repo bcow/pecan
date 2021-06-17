@@ -8,26 +8,14 @@
 #-------------------------------------------------------------------------------
 
 ##--------------------------------------------------------------------------------------------------#
-##'  Plot results of variance decomposition
+##' Variance Decomposition Plots
 ##'
 ##' Plots variance decomposition tryptich
 ##' @name plot_variance_decomposition
-##' @title Variance Decomposition Plots
-##' @export plot_variance_decomposition
+##' @export
 ##' @author David LeBauer, Carl Davidson
-##' @param ... Output from any number of sensitivity analyses. Output must be of the form 
+##' @param plot.inputs Output from a sensitivity analysis. Output must be of the form
 ##'          given by sensitivity.results$variance.decomposition.output in model output
-##' @param all.plot.inputs Optional argument allowing output from sensitivity analyses to be specified in a list
-##' @param exclude vector of strings specifying parameters to omit from the variance decomposition graph
-##' @param convert.var function transforming variances to the value displayed in the graph
-##' @param var.label label to displayed over variance column
-##' @param order.plot.input Output from a sensitivity analysis that is to be used to order parameters.
-##'          Parameters are ordered by variance. Defaults to the first sensitivity analysis output given
-##' @param ticks.plot.input Output from a sensitivity analysis that is to be used.
-##'          Defaults to the first sensitivity analysis output given
-##' @param col Color of each sensitivity analysis. Equivalent to col parameter of the plot function.
-##' @param pch Shape of each sensitivity analysis. Equivalent to pch parameter of the plot function.
-##' @param main Plot title. Useful for multi-pft variance decompositions.
 ##' @param fontsize list specifying the font size of the titles and axes of the graph
 ##' @examples
 ##' x <- list(trait.labels = c('a', 'b', 'c'),
@@ -137,7 +125,7 @@ plot_sensitivity <- function(sa.sample, sa.spline, trait, y.range = c(0, 50), me
                size = dotsize * 1.3) + 
     scale_y_continuous(limits = range(pretty(y.range)), breaks = pretty(y.range, n = 3)[1:3]) +
     theme_bw() + 
-    ggtitle(trait.lookup(trait)$figid) +
+    ggtitle(trait) +
     theme(axis.text.x = element_text(size = fontsize$axis),
           axis.text.y = element_text(size = fontsize$axis), 
           axis.title.x = element_text(size = fontsize$axis),

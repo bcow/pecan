@@ -3,12 +3,21 @@
 ##'
 ##' @title Paramater Data Assimilation using BayesianTools
 ##' @param settings = a pecan settings list
+##' @param params.id id of pars
+##' @param param.names names of pars
+##' @param prior.id ids of priors
+##' @param chain how many chains
+##' @param iter how many iterations
+##' @param adapt adaptation intervals
+##' @param adj.min to be used in adjustment
+##' @param ar.target acceptance rate target
+##' @param jvar jump variance
+##' @param n.knot number of knots requested
 ##'
 ##' @return nothing. Diagnostic plots, MCMC samples, and posterior distributions
 ##'  are saved as files and db records.
 ##'
-##' @author Mike Dietze
-##' @author Istem Fer, Ryan Kelly
+##' @author Istem Fer
 ##' @export
 pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, prior.id = NULL,
                                chain = NULL, iter = NULL, adapt = NULL, adj.min = NULL, 
@@ -36,17 +45,17 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
   
   ## Open database connection
   if (settings$database$bety$write) {
-    con <- try(db.open(settings$database$bety), silent = TRUE)
-    if (is(con, "try-error")) {
+    con <- try(PEcAn.DB::db.open(settings$database$bety), silent = TRUE)
+    if (inherits(con, "try-error")) {
       con <- NULL
     } else {
-      on.exit(db.close(con))
+      on.exit(PEcAn.DB::db.close(con), add = TRUE)
     }
   } else {
     con <- NULL
   }
   
-  bety <- src_postgres(dbname = settings$database$bety$dbname, 
+  bety <- dplyr::src_postgres(dbname = settings$database$bety$dbname,
                        host = settings$database$bety$host, 
                        user = settings$database$bety$user, 
                        password = settings$database$bety$password)
@@ -62,6 +71,9 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
   inputs  <- load.pda.data(settings, bety)
   n.input <- length(inputs)
   
+  # get hyper parameters if any
+  hyper.pars <- return_hyperpars(settings$assim.batch, inputs)
+  
   # efficient sample size calculation
   # fot BT you might want to run the model once and align inputs & outputs, then calculate n_eff
   # for now assume they will be same length
@@ -71,7 +83,7 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
   do.call("require", list(paste0("PEcAn.", settings$model$type)))
   my.write.config <- paste("write.config.", settings$model$type, sep = "")
   if (!exists(my.write.config)) {
-    logger.severe(paste(my.write.config, "does not exist. Please make sure that the PEcAn interface is loaded for", 
+    PEcAn.logger::logger.severe(paste(my.write.config, "does not exist. Please make sure that the PEcAn interface is loaded for", 
                         settings$model$type))
   }
   
@@ -83,7 +95,7 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
   ## NOTE: The listed samplers here require more than 1 parameter for now because of the way their
   ## cov is calculated
   if (sampler %in% c("M", "AM", "DR", "DRAM", "DREAM", "DREAMzs", "SMC") & sum(n.param) < 2) {
-    logger.error(paste0(sampler, " sampler can be used with >=2 paramaters"))
+    PEcAn.logger::logger.error(paste0(sampler, " sampler can be used with >=2 paramaters"))
   }
   
   ## Get the workflow id
@@ -133,7 +145,7 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
                                                                                                              now, sep = "."))
     
     ## Start model run
-    start.model.runs(settings, settings$database$bety$write)
+    PEcAn.remote::start.model.runs(settings, settings$database$bety$write)
     
     ## Read model outputs
     align.return <- pda.get.model.output(settings, run.id, bety, inputs)
@@ -167,7 +179,8 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
     ## calculate error statistics      
     pda.errors <- pda.calc.error(settings, con, model_out = model.out, run.id, inputs, all.bias)
     llik.par <- pda.calc.llik.par(settings, n = n.of.obs, 
-                                  error.stats = unlist(pda.errors))
+                                  error.stats = unlist(pda.errors),
+                                  hyper.pars)
     ## Calculate likelihood
     LL.new <- pda.calc.llik(pda.errors = unlist(pda.errors), llik.fn, llik.par)
     
@@ -175,9 +188,9 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
   }
   
   ## Create bayesianSetup object for BayesianTools
-  bayesianSetup <- createBayesianSetup(bt.likelihood, bt.prior, best = parm[prior.ind.all], parallel = FALSE)
+  bayesianSetup <- BayesianTools::createBayesianSetup(bt.likelihood, bt.prior, best = parm[prior.ind.all], parallel = FALSE)
   
-  logger.info(paste0("Extracting upper and lower boundaries from priors."))  # M/AM/DR/DRAM can't work with -Inf, Inf values
+  PEcAn.logger::logger.info(paste0("Extracting upper and lower boundaries from priors."))  # M/AM/DR/DRAM can't work with -Inf, Inf values
   rng <- matrix(c(sapply(prior.fn.all$qprior[prior.ind.all], eval, list(p = 1e-05)), 
                   sapply(prior.fn.all$qprior[prior.ind.all], eval, list(p = 0.99999))), 
                 nrow = sum(n.param))
@@ -197,10 +210,10 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
   
   if (!is.null(settings$assim.batch$extension)) {
     load(settings$assim.batch$out.path)  # loads previous out list
-    out <- runMCMC(bayesianSetup = out, sampler = sampler, settings = bt.settings)
+    out <- BayesianTools::runMCMC(bayesianSetup = out, sampler = sampler, settings = bt.settings)
   } else {
     ## central function in BayesianTools
-    out <- runMCMC(bayesianSetup = bayesianSetup, sampler = sampler, settings = bt.settings)
+    out <- BayesianTools::runMCMC(bayesianSetup = bayesianSetup, sampler = sampler, settings = bt.settings)
   }
   
   # save the out object for restart functionality and further inspection
@@ -211,7 +224,7 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
   save(out, file = settings$assim.batch$out.path)
   
   # prepare for post-process
-  samples <- getSample(out, parametersOnly = TRUE)  # getSample{BayesianTools}
+  samples <- BayesianTools::getSample(out, parametersOnly = TRUE)  # getSample{BayesianTools}
   colnames(samples) <- pname.all[prior.ind.all]
   mcmc.list <- list(samples)
   
@@ -229,7 +242,7 @@ pda.bayesian.tools <- function(settings, params.id = NULL, param.names = NULL, p
   
   ## close database connection
   if (!is.null(con)) {
-    db.close(con)
+    PEcAn.DB::db.close(con)
   }
   
   ## Output an updated settings list

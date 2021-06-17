@@ -1,8 +1,10 @@
 Package: PEcAn.PRELES
 Type: Package
 Title: PEcAn package for integration of the PRELES model
-Version: 1.4.10.1
-Date: 2017-04-18
+Version: 1.7.1
+Date: 2019-09-05
+Authors@R: c(person("Mike","Dietze"),
+             person("Tony", "Gardella"))
 Author: Tony Gardella, Mike Dietze
 Maintainer: Tony Gardella <tonygard@bu.edu>
 Description: This module provides functions to run the PREdict Light use
@@ -15,15 +17,21 @@ Description: This module provides functions to run the PREdict Light use
 Depends:
     PEcAn.utils
 Imports:
+    PEcAn.logger,
     lubridate (>= 1.6.0),
     ncdf4 (>= 1.15),
-    udunits2 (>= 0.11)
+    udunits2 (>= 0.11),
+    PEcAn.data.atmosphere,
+    PEcAn.utils
 Suggests:
-    testthat (>= 1.0.2)
-SystemRequirements: preles
+    testthat (>= 1.0.2),
+    Rpreles
+Remotes:
+    github::MikkoPeltoniemi/Rpreles
 OS_type: unix
-License: FreeBSD + file LICENSE
+License: BSD_3_clause + file LICENSE
 Copyright: Authors
 LazyLoad: yes
 LazyData: FALSE
-RoxygenNote: 6.0.1
+Encoding: UTF-8
+RoxygenNote: 7.0.2

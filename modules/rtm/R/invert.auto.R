@@ -1,66 +1,57 @@
-#' @name invert.auto 
-#' 
-#' @title Inversion with automatic convergence checking
-#' @details Performs an inversion via the \code{invert.custom} function with 
-#' multiple chains and automatic convergence checking.  Convergence checks are 
+#' Inversion with automatic convergence checking
+#'
+#' @details Performs an inversion via the \code{invert.custom} function with
+#' multiple chains and automatic convergence checking.  Convergence checks are
 #' performed using the multivariate Gelman-Rubin diagnostic.
 #' @param invert.options Parameters related to inversion.
-#' @param return.samples Include full samples list in output. Default = 
-#' \code{TRUE}.
-#' @param save.samples Save samples to file as the inversion proceeds (useful 
-#' for debugging). If \code{NULL}, do not save samples. Default = \code{NULL}.
-#' @param parallel Logical. Whether or not to run multiple chains in parallel 
-#' on multiple cores (default = \code{TRUE}).
-#' @param parallel.cores Number of cores to use for parallelization. If 
-#' \code{NULL}
-#' (default), allocate one fewer than detected number of cores.
-#' @param parallel.output Filename (or '' for stdout) for printing parallel 
-#' outputs. Use with caution. Default = \code{'/dev/null'}.
+#' @param return.samples Include full samples list in output. Default = `TRUE.`
+#' @param save.samples Save samples to file as the inversion proceeds (useful
+#' for debugging). If `NULL`, do not save samples. Default = `NULL`.
+#' @param parallel Logical. Whether or not to run multiple chains in parallel
+#' on multiple cores (default = `TRUE`).
+#' @param parallel.cores Number of cores to use for parallelization. If
+#' `NULL` (default), allocate one fewer than detected number of cores.
+#' @param parallel.output Filename (or '' for stdout) for printing parallel
+#' outputs. Use with caution. Default = `'/dev/null'`.
 #' @inheritParams invert.custom
 #' 
 #' @details
-#' Parameters specific to \code{invert.auto} are described here.
-#' For the remaining parameters, see \code{\link{invert.custom}}.
-#' \itemize{
+#' Parameters specific to `invert.auto` are described here.
+#' For the remaining parameters, see [invert.custom()].
 #' 
-#' \item{model}{The model to be inverted. This should be an R function that 
-#' takes \code{params} as input and returns one column of \code{observed} 
-#' (nrows should be the same). Constants should be implicitly included here. }
+#' * `model` -- The model to be inverted. This should be an R function that
+#' takes \code{params} as input and returns one column of \code{observed}
+#' (nrows should be the same). Constants should be implicitly included here.
 #'
-#' \item{nchains}{Number of independent chains.}
+#' * `nchains` -- Number of independent chains.
 #' 
-#' \item{inits.function}{Function for generating initial conditions.}
+#' * `inits.function` -- Function for generating initial conditions.
 #' 
-#' \item{ngibbs.max}{Maximum number of total iterations (per chain). DEFAULT 
-#' = 5e6}
+#' * `ngibbs.max` -- Maximum number of total iterations (per chain). DEFAULT = 5e6
 #'
-#' \item{ngibbs.min}{Minimum number of total iterations (per chain). DEFAULT = 
-#' 5000.}
+#' * `ngibbs.min` -- Minimum number of total iterations (per chain). DEFAULT = 5000.
 #'
-#' \item{ngibbs.step}{Number of iterations between convergence checks. Default 
-#' = 1000.}
+#' * `ngibbs.step` -- Number of iterations between convergence checks. Default = 1000.
 #'
-#' \item{run_first}{Function to run before running sampling. Takes parallel 
-#' inputs list containing runID, initial values, and resume (NULL) as an 
-#' argument.}
+#' * `run_first` -- Function to run before running sampling. Takes parallel
+#' inputs list containing runID, initial values, and resume (NULL) as an
+#' argument.
 #'
-#' \item{calculate.burnin}{If \code{TRUE}, use 
-#' \code{PEcAn.assim.batch::autoburin} function to calculate burnin. Otherwise, 
-#' assume burnin is \code{min(niter/2, iter_conv_check)}.}
+#' * `calculate.burnin` -- If `TRUE`, use `PEcAn.assim.batch::autoburin`
+#' function to calculate burnin. Otherwise, assume burnin is `min(niter/2,
+#' iter_conv_check)`.
 #'
-#' \item{threshold}{Maximum value of the Gelman-Rubin diagnostic for 
-#' determining convergence. Default = 1.1}
-#' }
-#' 
+#' * `threshold` -- Maximum value of the Gelman-Rubin diagnostic for
+#' determining convergence. Default = 1.1
 #'
-#' @return List including \code{results} (summary statistics), \code{samples} 
-#' (\code{mcmc.list} object, or \code{NA} if \code{return.samples=FALSE}), and 
-#' other information.
+#' @return List including `results` (summary statistics), `samples`
+#' (`mcmc.list` object, or `NA` if `return.samples=FALSE`), and other
+#' information.
 #' @export
 
 invert.auto <- function(observed, invert.options,
                         return.samples = TRUE,
-                        save.samples = NULL, 
+                        save.samples = NULL,
                         quiet=FALSE,
                         parallel=TRUE,
                         parallel.cores=NULL,
@@ -100,8 +91,8 @@ invert.auto <- function(observed, invert.options,
   if (is.null(inits.function)) {
     stop("invert.options$inits.function is required but missing.")
   }
-  if (is.null(invert.options$do.lsq)) { 
-    invert.options$do.lsq <- FALSE 
+  if (is.null(invert.options$do.lsq)) {
+    invert.options$do.lsq <- FALSE
     message("do.lsq not provided. ",
             "Setting default to ", invert.options$do.lsq)
   }
@@ -126,7 +117,7 @@ invert.auto <- function(observed, invert.options,
     message("calculate.burnin not provided. ",
             "Setting default to ", calculate.burnin)
   }
-  
+
   # Set up cluster for parallel execution
   if (parallel) {
     ## Create cluster
@@ -137,38 +128,38 @@ invert.auto <- function(observed, invert.options,
       if (!is.numeric(parallel.cores) | parallel.cores %% 1 != 0) {
         stop("Invalid argument to 'parallel.cores'. Must be integer or NULL")
       } else if (parallel.cores > maxcores) {
-        warning(sprintf("Requested %1$d cores but only %2$d cores available. ", 
-                        parallel.cores, maxcores), 
+        warning(sprintf("Requested %1$d cores but only %2$d cores available. ",
+                        parallel.cores, maxcores),
                 "Using only available cores.")
         parallel.cores <- maxcores
       }
     }
     cl <- parallel::makeCluster(parallel.cores, "FORK", outfile = parallel.output)
-    on.exit(parallel::stopCluster(cl))
+    on.exit(parallel::stopCluster(cl), add = TRUE)
 
-    # Initialize random seeds on cluster. 
+    # Initialize random seeds on cluster.
     # Otherwise, chains may start on same seed and end up identical.
     parallel::clusterSetRNGStream(cl)
 
-    message(sprintf("Running %d chains in parallel. ", nchains), 
+    message(sprintf("Running %d chains in parallel. ", nchains),
             "Progress bar unavailable")
   }
-  
+
   # Create inversion function to be passed to parLapply
   invert.function <- function(x) {
     invert.options$inits <- x$inits
     invert.options$resume <- x$resume
     samps <- invert.custom(observed = observed,
-                           invert.options = invert.options, 
+                           invert.options = invert.options,
                            quiet = quiet,
                            return.resume = TRUE,
                            runID = x$runID)
     return(samps)
   }
-  
+
   runID_list <- seq_len(nchains)
   inputs <- list()
-  for (i in seq_len(nchains)) { 
+  for (i in seq_len(nchains)) {
     inputs[[i]] <- list(runID = runID_list[i],
                         inits = inits.function(),
                         resume = NULL)
@@ -183,7 +174,7 @@ invert.auto <- function(observed, invert.options,
       for (i in seq_len(nchains)) {
         first[[i]] <- invert.options$run_first(inputs[[i]])
       }
-    } 
+    }
   }
 
   # Begin inversion
@@ -200,7 +191,7 @@ invert.auto <- function(observed, invert.options,
   }
 
   resume <- lapply(output.list, '[[', 'resume')
-  out <- process_output(output.list = output.list, 
+  out <- process_output(output.list = output.list,
                         iter_conv_check = iter_conv_check,
                         save.samples = save.samples,
                         threshold = threshold,
@@ -233,7 +224,7 @@ invert.auto <- function(observed, invert.options,
     resume <- lapply(output.list, '[[', 'resume')
     out <- process_output(output.list = output.list,
                           prev_out = out,
-                          iter_conv_check = iter_conv_check, 
+                          iter_conv_check = iter_conv_check,
                           save.samples = save.samples,
                           threshold = threshold,
                           calculate.burnin = calculate.burnin)
@@ -271,7 +262,7 @@ combineChains <- function(samps1, samps2) {
 process_output <- function(output.list,
                            prev_out = NULL,
                            iter_conv_check,
-                           save.samples, 
+                           save.samples,
                            threshold,
                            calculate.burnin) {
 
@@ -288,7 +279,7 @@ process_output <- function(output.list,
     out$n_eff_list <- n_eff_list.current
   } else {
     out$samples <- combineChains(prev_out$samples, samples.current)
-    out$deviance_list <- mapply(c, prev_out$deviance_list, 
+    out$deviance_list <- mapply(c, prev_out$deviance_list,
                                 deviance_list.current, SIMPLIFY = F)
     out$n_eff_list <- mapply(c, prev_out$n_eff_list, n_eff_list.current,
                              SIMPLIFY = F)
@@ -302,7 +293,7 @@ process_output <- function(output.list,
   out$nsamp <- coda::niter(out$samples)
   nburn <- min(floor(out$nsamp/2), iter_conv_check)
   burned_samples <- window(out$samples, start = nburn)
-  check_initial <- check.convergence(burned_samples, 
+  check_initial <- check.convergence(burned_samples,
                                      threshold = threshold,
                                      autoburnin = FALSE)
   if (check_initial$error) {
@@ -318,7 +309,7 @@ process_output <- function(output.list,
     message("Passed initial convergence check.")
   }
   if (calculate.burnin) {
-    burn <- PEcAn.assim.batch::autoburnin(out$samples, return.burnin = TRUE)
+    burn <- PEcAn.assim.batch::autoburnin(out$samples, return.burnin = TRUE, method = 'gelman.plot')
     out$burnin <- burn$burnin
     if (out$burnin == 1) {
       message("Robust convergence check in autoburnin failed. ",
@@ -339,4 +330,3 @@ process_output <- function(output.list,
   out$finished <- TRUE
   return(out)
 }
-

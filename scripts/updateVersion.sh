@@ -30,7 +30,7 @@ for d in $FILES; do
   echo "Modifying : $d"
   sed -i.bak -e "s/^Version: .*$/Version: $VERSION/" \
              -e "s/^Date: .*$/Date: $DATE/" \
-             -e "s/^License: .*/License: FreeBSD + file LICENSE/" $d
+             -e "s/^License: .*/License: BSD_3_clause + file LICENSE/" $d
   if [ ! -e "${DIR}/LICENSE" ]; then
   	if [ -e LICENSE ]; then
   		echo "Copied LICENSE file to ${DIR}"
@@ -44,5 +44,5 @@ done
 # update pecan version in web page
 if [ $# -eq 0 ]; then
   echo "Modifying : web/common.php"
-  sed -i.bak -e "s/PEcAn Version [0-9\.]*/PEcAn Version ${VERSION}/" web/common.php
+  sed -i.bak -e "s/PEcAn Version [0-9\.\-]*/PEcAn Version ${VERSION}/" web/common.php
 fi

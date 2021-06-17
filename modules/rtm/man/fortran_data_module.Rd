@@ -16,15 +16,18 @@ to initialize FORTRAN variabiles.}
 
 \item{fname}{Output file name. Defaults to 'yourmodname.f90'}
 }
+\description{
+Convert R list to a Fortran \verb{/data/} module block
+}
 \details{
 For models with large constants (e.g. absorption features in the
-      PROSPECT model), it may be preferable to store these in FORTRAN90
-      modules. However, manually creating and formatting these files is 
-      tedious. This script allows you to automatically generate module files
-      from R lists. It automatically interprets the object lengths as array
-      dimensions (only vectors are supported right now -- higher dimension
-      arrays may be in the future) and splits long data into rows of 10.
-      Currently, only numeric data are supported (i.e. no characters).
+PROSPECT model), it may be preferable to store these in FORTRAN90
+modules. However, manually creating and formatting these files is
+tedious. This script allows you to automatically generate module files
+from R lists. It automatically interprets the object lengths as array
+dimensions (only vectors are supported right now -- higher dimension
+arrays may be in the future) and splits long data into rows of 10.
+Currently, only numeric data are supported (i.e. no characters).
 }
 \examples{
       w <- 3.2
@@ -33,14 +36,16 @@ For models with large constants (e.g. absorption features in the
       z <- seq(exp(1), pi, length.out=42)
       l <- list(x=x, y=y, z=z) ## NOTE that names must be explicitly declared
       l.types <- c('real','integer', 'real*4', 'real*8')
-      fortran_data_module(l, l.types, 'testmod')
- 
+      fortran_data_module(l, l.types, 'testmod',
+        file.path(tempdir(), "testmod.f90"))
+
       x <- runif(10)
       y <- rnorm(10)
       z <- rgamma(10, 3)
       d <- data.frame(x,y,z) ## NOTE that data.frames are just named lists
       d.types <- rep('real*8', ncol(d))
-      fortran_data_module(d, d.types, 'random') 
+      fortran_data_module(d, d.types, 'random',
+        file.path(tempdir(), "random.f90"))
 }
 \author{
 Alexey Shiklomanov

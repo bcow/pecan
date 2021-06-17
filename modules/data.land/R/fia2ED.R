@@ -7,9 +7,6 @@
 # http://opensource.ncsa.illinois.edu/license.html
 #-------------------------------------------------------------------------------
 
-library(PEcAn.utils)
-library(PEcAn.DB)
-
 ##' convert x into a table
 ##'
 ##' @title fia.to.psscss
@@ -37,14 +34,14 @@ fia.to.psscss <- function(settings,
   lonmin <- lon - gridres
   
   ## connect to database
-  con <- db.open(settings$database$bety)
-  on.exit(db.close(con))
+  con <- PEcAn.DB::db.open(settings$database$bety)
+  on.exit(PEcAn.DB::db.close(con), add = TRUE)
   
   # Check whether inputs exist already
   if(!overwrite) {
     existing.files <- list()
     for(format in formatnames) {
-      existing.files[[format]] <- dbfile.input.check(
+      existing.files[[format]] <- PEcAn.DB::dbfile.input.check(
         siteid     = settings$run$site$id,
         startdate  = startdate,
         enddate    = enddate,
@@ -64,10 +61,10 @@ fia.to.psscss <- function(settings,
                                                   pss.path = file.paths$ED2.patch, 
                                                   site.path = file.paths$ED2.site)
       
-      logger.info("Using existing pss, css, and site files.")
+      PEcAn.logger::logger.info("Using existing pss, css, and site files.")
       return(invisible(settings))
     } else {
-      logger.info("No existing pss, css, and site files.")
+      PEcAn.logger::logger.info("No existing pss, css, and site files.")
     }
   }
   
@@ -82,7 +79,7 @@ fia.to.psscss <- function(settings,
       query <- paste0(query, " OR bp.name = '", pft$name, "'")
     }
   }
-  pfts <- db.query(query, con = con)
+  pfts <- PEcAn.DB::db.query(query, con = con)
   
   # Convert PFT names to ED2 Numbers
   data(pftmapping)
@@ -93,7 +90,7 @@ fia.to.psscss <- function(settings,
       pft.number <- pftmapping$ED[which(pftmapping == pft.i$name)]
     }
     if (is.null(pft.number)) {
-      logger.severe(paste0("Couldn't find an ED2 PFT number for ", pft.i$name))
+      PEcAn.logger::logger.severe(paste0("Couldn't find an ED2 PFT number for ", pft.i$name))
     }
     pfts$pft[pfts$pft == pft.i$name] <- pft.number
   }
@@ -102,27 +99,27 @@ fia.to.psscss <- function(settings,
   ## Check for NA and duplicate spcds in PFTs
   bad <- length(pfts$spcd %in% c(NA, "0"))
   if (bad > 0) {
-    logger.warn(sprintf("There are %d entries with no SPCD (NA or 0). They have been removed.", bad))
+    PEcAn.logger::logger.warn(sprintf("There are %d entries with no SPCD (NA or 0). They have been removed.", bad))
     pfts <- pfts[!pfts$spcd %in% c(NA, 0), ]
   }
   
   bad <- pfts$spcd[duplicated(pfts$spcd)]
   if (length(bad) > 0) {
     # Coerce spcds back into species names using data from FIA manual. Makes a more readable warning.
-    symbol.table <- db.query("SELECT spcd, \"Symbol\" FROM species where spcd IS NOT NULL", con = con)
+    symbol.table <- PEcAn.DB::db.query("SELECT spcd, \"Symbol\" FROM species where spcd IS NOT NULL", con = con)
     names(symbol.table) <- tolower(names(symbol.table))
     
     # grab the names where we have bad spcds in the symbol.table, exclude NAs
     name.list <- na.omit(symbol.table$symbol[symbol.table$spcd %in% bad])
     
-    logger.severe(paste0("The following species are found in multiple PFTs: ", 
+    PEcAn.logger::logger.severe(paste0("The following species are found in multiple PFTs: ", 
                          paste(name.list[1:min(10, length(name.list))], collapse = ", "), 
                          ". Please remove overlapping PFTs."))
   }
   
   ## connect to database
-  fia.con <- db.open(settings$database$fia)
-  on.exit(db.close(fia.con), add = T)
+  fia.con <- PEcAn.DB::db.open(settings$database$fia)
+  on.exit(PEcAn.DB::db.close(fia.con), add = TRUE)
   
   ##################
   ##              ##
@@ -137,9 +134,9 @@ fia.to.psscss <- function(settings,
                  " AND p.lat <= ", latmax, " AND p.measyear >= ", min.year, 
                  " AND p.measyear <= ", max.year, " GROUP BY p.cn")
   
-  pss <- db.query(query, con = fia.con)
+  pss <- PEcAn.DB::db.query(query, con = fia.con)
   if (nrow(pss) == 0) {
-    logger.severe("No pss data found.")
+    PEcAn.logger::logger.severe("No pss data found.")
   }
   
   for (statecd in unique(pss$statecd)) {
@@ -159,7 +156,7 @@ fia.to.psscss <- function(settings,
   pss <- pss[.select.unique.fia.plot.records(pss$patch, pss$prev_plt_cn, pss$time, year), ]
   
   if (nrow(pss) == 0) {
-    logger.severe("All pss data were invalid.")
+    PEcAn.logger::logger.severe("All pss data were invalid.")
   }
   
   pss$trk[which(is.na(pss$trk))] <- 1
@@ -181,7 +178,7 @@ fia.to.psscss <- function(settings,
   names(soil.dat) <- c("fsc", "stsc", "stsl", "ssc", "psc", "msn", "fsn")
   pss             <- cbind(pss, soil.dat)
   
-  logger.debug(paste0("Found ", nrow(pss), " patches for site ", settings$run$site$id))
+  PEcAn.logger::logger.debug(paste0("Found ", nrow(pss), " patches for site ", settings$run$site$id))
   
   ##################
   ##              ##
@@ -195,20 +192,20 @@ fia.to.psscss <- function(settings,
                   " and p.lon < ", lonmax, 
                   " and p.lat >= ", latmin,
                   " and p.lat < ", latmax)
-  css <- db.query(query, con = fia.con)
+  css <- PEcAn.DB::db.query(query, con = fia.con)
   names(css) <- tolower(names(css))
   if (nrow(css) == 0) {
-    logger.severe("No FIA data found.")
+    PEcAn.logger::logger.severe("No FIA data found.")
   } else {
-    logger.debug(paste0(nrow(css), " trees found initially"))
+    PEcAn.logger::logger.debug(paste0(nrow(css), " trees found initially"))
   }
   
   # Remove rows that don't map to any retained patch
   css <- css[which(css$patch %in% pss$patch), ]
   if (nrow(css) == 0) {
-    logger.severe("No trees map to previously selected patches.")
+    PEcAn.logger::logger.severe("No trees map to previously selected patches.")
   } else {
-    logger.debug(paste0(nrow(css), " trees that map to previously selected patches."))
+    PEcAn.logger::logger.debug(paste0(nrow(css), " trees that map to previously selected patches."))
   }
   
   
@@ -218,9 +215,9 @@ fia.to.psscss <- function(settings,
     css <- css[-notree, ]
   }
   if (nrow(css) == 0) {
-    logger.severe("No trees remain after removing entries with no dbh, spcd, and/or n.")
+    PEcAn.logger::logger.severe("No trees remain after removing entries with no dbh, spcd, and/or n.")
   } else {
-    logger.debug(paste0(nrow(css), " trees remain after removing entries with no dbh, spcd, and/or n."))
+    PEcAn.logger::logger.debug(paste0(nrow(css), " trees remain after removing entries with no dbh, spcd, and/or n."))
   }
   
   # --- Consistency tests between PFTs and FIA
@@ -232,11 +229,11 @@ fia.to.psscss <- function(settings,
   
   if (length(pft.only) > 0) {
     if (!exists("symbol.table")) {
-      symbol.table <- db.query("SELECT spcd, \"Symbol\" FROM species where spcd IS NOT NULL", con = con)
+      symbol.table <- PEcAn.DB::db.query("SELECT spcd, \"Symbol\" FROM species where spcd IS NOT NULL", con = con)
       names(symbol.table) <- tolower(names(symbol.table))
     }
     name.list <- na.omit(symbol.table$symbol[symbol.table$spcd %in% pft.only])
-    logger.warn(paste0("The selected PFTs contain the following species for which the FIA database ",
+    PEcAn.logger::logger.warn(paste0("The selected PFTs contain the following species for which the FIA database ",
                        "contains no data at ", lat, " and ", lon, ": ", 
                        paste(name.list[1:min(10, length(name.list))], collapse = ", "), "."))
   }
@@ -247,13 +244,13 @@ fia.to.psscss <- function(settings,
   
   if (length(fia.only) > 0) {
     if (!exists("symbol.table")) {
-      symbol.table <- db.query("SELECT spcd, \"Symbol\" FROM species where spcd IS NOT NULL", con = con)
+      symbol.table <- PEcAn.DB::db.query("SELECT spcd, \"Symbol\" FROM species where spcd IS NOT NULL", con = con)
       names(symbol.table) <- tolower(names(symbol.table))
     }
     name.list <- na.omit(symbol.table$symbol[symbol.table$spcd %in% fia.only])
     name.list <- name.list[name.list != "DEAD"]
     if (length(name.list) > 0) {
-      logger.warn(paste0("The FIA database expects the following species at ", lat, " and ", lon, 
+      PEcAn.logger::logger.warn(paste0("The FIA database expects the following species at ", lat, " and ", lon, 
                          " but they are not described by the selected PFTs: ", 
                          paste(name.list, collapse = ", "), 
                          ". You should select additional pfts if you want to include these. "))
@@ -262,11 +259,11 @@ fia.to.psscss <- function(settings,
   
   css <- css[!(css$spcd %in% fia.only), ]
   if (nrow(css) == 0) {
-    logger.severe(paste0("No trees remain for selected PFTs. ",
+    PEcAn.logger::logger.severe(paste0("No trees remain for selected PFTs. ",
       "Species that were in FIA data but didn't map to a selected PFT are: ", 
       paste(name.list, collapse = ", "), "."))
   } else {
-    logger.debug(paste0(nrow(css), " trees remain for selected PFTs."))
+    PEcAn.logger::logger.debug(paste0(nrow(css), " trees remain for selected PFTs."))
   }
 
 
@@ -286,11 +283,11 @@ fia.to.psscss <- function(settings,
   
   pfts.represented <- sapply(settings$pfts, function(x) x$constants$num) %in% css$pft
   if (!all(pfts.represented)) 
-    logger.warn(paste0(
+    PEcAn.logger::logger.warn(paste0(
       "The following PFTs listed in settings are not represented in the FIA data: ",
       paste(sapply(settings$pfts, function(x) x$name)[!pfts.represented], collapse = ", ")))
   
-  logger.debug(paste0("Found ", nrow(css), " cohorts for site ", settings$run$site$id))
+  PEcAn.logger::logger.debug(paste0("Found ", nrow(css), " cohorts for site ", settings$run$site$id))
   
   ##################
   ##              ##
@@ -338,10 +335,10 @@ fia.to.psscss <- function(settings,
     css.file.remote  <- file.path(out.dir.remote, paste0(prefix.psscss, ".css"))
     site.file.remote <- file.path(out.dir.remote, paste0(prefix.site, ".site"))
     
-    remote.execute.cmd(settings$host, "mkdir", c("-p", out.dir.remote))
-    remote.copy.to(settings$host, pss.file.local, pss.file.remote)
-    remote.copy.to(settings$host, css.file.local, css.file.remote)
-    remote.copy.to(settings$host, site.file.local, site.file.remote)
+    PEcAn.remote::remote.execute.cmd(settings$host, "mkdir", c("-p", out.dir.remote))
+    PEcAn.remote::remote.copy.to(settings$host, pss.file.local, pss.file.remote)
+    PEcAn.remote::remote.copy.to(settings$host, css.file.local, css.file.remote)
+    PEcAn.remote::remote.copy.to(settings$host, site.file.local, site.file.remote)
     files <- c(pss.file.remote, css.file.remote, site.file.remote)
   }
   
@@ -404,7 +401,7 @@ get.ed.file.latlon.text <- function(lat, lon, site.style = FALSE, ed.res = 1) {
 # current code. But it could be useful for future updates. 
 .select.unique.fia.plot.records <- function(plt_cn, prev_plt_cn, measyear, target.year) {
   if (length(plt_cn) != length(prev_plt_cn)) {
-    logger.error("Inputs must have same length!")
+    PEcAn.logger::logger.error("Inputs must have same length!")
     return(NULL)
   }
   
